@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { AvatarDropdown } from '@/components/avatar-dropdown';
 import { InputFile } from '@/components/file-upload';
 import { Button } from '@/components/ui/button';
@@ -11,13 +13,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useState } from 'react';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 
 const ChatLayout = ({ children }: { children: React.ReactNode }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { user } = useUser();
   const { toast } = useToast();
@@ -64,6 +66,7 @@ const ChatLayout = ({ children }: { children: React.ReactNode }) => {
         description: uploadedFile?.name,
       });
     }
+    setDialogOpen(false);
   };
 
   return (
@@ -74,7 +77,7 @@ const ChatLayout = ({ children }: { children: React.ReactNode }) => {
             <NotebookPen className="w-6 h-6" />
             SermonVault
           </div>
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="sm" className="mr-4">
                 <FilePlus className="w-4 h-4 mr-2" />
