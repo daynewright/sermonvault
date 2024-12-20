@@ -24,7 +24,6 @@ export default function ChatSection() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     // Find the Radix UI viewport element

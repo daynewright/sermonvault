@@ -13,12 +13,14 @@ import {
 } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { useUser } from '@/hooks/use-user';
+import { useToast } from '@/hooks/use-toast';
 
 const ChatLayout = ({ children }: { children: React.ReactNode }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const { user } = useUser();
+  const { toast } = useToast();
 
   const handleFileSelect = (file: File) => {
     setUploadedFile(file);
@@ -37,18 +39,30 @@ const ChatLayout = ({ children }: { children: React.ReactNode }) => {
         body: formData,
       });
 
-      const data = await response.json();
-
       if (response.ok) {
         setIsUploading(false);
         setUploadedFile(null);
+        toast({
+          title: 'Sermon added to AI successfully!',
+          description: uploadedFile?.name,
+        });
       } else {
         setIsUploading(false);
         setUploadedFile(null);
+        toast({
+          variant: 'destructive',
+          title: 'Failed to add sermon to AI',
+          description: uploadedFile?.name,
+        });
       }
     } catch (error) {
       setIsUploading(false);
       setUploadedFile(null);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to add sermon to AI',
+        description: uploadedFile?.name,
+      });
     }
   };
 
