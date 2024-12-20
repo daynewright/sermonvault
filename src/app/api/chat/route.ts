@@ -38,8 +38,8 @@ export async function POST(req: Request) {
       'match_documents',
       {
         query_embedding: embedding[0].embedding,
-        match_threshold: 0.1,    // Much lower threshold
-        match_count: 10,         // More results
+        match_threshold: 0.1, 
+        match_count: 10,       
         p_user_id: user.id
       }
     );

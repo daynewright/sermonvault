@@ -24,13 +24,21 @@ export default function ChatSection() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current;
-      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  const scrollToBottom = () => {
+    // Find the Radix UI viewport element
+    const viewport = scrollAreaRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    );
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
     }
+  };
+
+  // Scroll when messages change
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
   const handleSendMessage = async (message: string) => {
@@ -72,7 +80,6 @@ export default function ChatSection() {
         const text = new TextDecoder().decode(value);
         aiMessage += text;
 
-        // Update the AI message as it streams in
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === loadingMessage.id
@@ -80,6 +87,11 @@ export default function ChatSection() {
               : msg
           )
         );
+
+        // Force scroll after each update
+        requestAnimationFrame(() => {
+          scrollToBottom();
+        });
       }
     } catch (error) {
       console.error('Chat error:', error);
