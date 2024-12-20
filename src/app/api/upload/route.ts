@@ -1,15 +1,21 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
-import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
+import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+import { randomUUID } from 'crypto';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-async function processFile(file: File) {
+async function processFile(file: File, userId: string) {
   try {
-    // Load and parse PDF directly from File
+    // Generate a single sermon ID for all chunks
+    const sermonId = randomUUID();
+
+    // Load and parse PDF
     const loader = new PDFLoader(file);
     const docs = await loader.load();
     const text = docs.map((doc) => doc.pageContent).join(' ');
@@ -21,22 +27,31 @@ async function processFile(file: File) {
     });
     const chunks = await splitter.splitText(text);
 
-    // Get embedding for first chunk only (for testing)
-    const embedding = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: chunks[0],
-    });
+    // Get embeddings for all chunks
+    const embeddings = await Promise.all(
+      chunks.map(chunk => 
+        openai.embeddings.create({
+          model: 'text-embedding-3-small',
+          input: chunk,
+        })
+      )
+    );
 
-    return {
-      success: true,
-      sample: {
-        chunk: chunks[0],
-        embedding: embedding.data[0].embedding.slice(0, 5), // Just first 5 values
-        totalChunks: chunks.length,
-        embeddingLength: embedding.data[0].embedding.length,
-        totalPages: docs.length,
+    // Prepare documents for storage
+    const documents = chunks.map((chunk, index) => ({
+      content: chunk,
+      embedding: embeddings[index].data[0].embedding,
+      sermon_id: sermonId,
+      metadata: {
+        filename: file.name,
+        pageCount: docs.length,
+        chunkIndex: index,
+        uploadedAt: new Date().toISOString(),
       },
-    };
+      user_id: userId,
+    }));
+
+    return { documents, sermonId };
   } catch (error) {
     console.error('PDF processing error:', error);
     throw error;
@@ -45,11 +60,26 @@ async function processFile(file: File) {
 
 export async function POST(req: Request) {
   try {
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No file provided' },
+        { status: 400 }
+      );
     }
 
     if (file.type !== 'application/pdf') {
@@ -59,8 +89,30 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await processFile(file);
-    return NextResponse.json(result);
+    // Process the file and get documents with embeddings
+    const { documents, sermonId } = await processFile(file, user.id);
+
+    // Store documents in Supabase
+    const { data, error } = await supabase
+      .from('documents')
+      .insert(documents)
+      .select();
+
+    if (error) {
+      console.error('Supabase storage error:', error);
+      return NextResponse.json(
+        { error: 'Failed to store documents' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      documentsStored: documents.length,
+      sermonId: sermonId,
+      firstChunk: documents[0].content.slice(0, 100) + '...',
+    });
+
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(

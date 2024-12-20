@@ -15,9 +15,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
+  // If session exists and trying to access auth routes
+  if (session && (
+    req.nextUrl.pathname === '/login' || 
+    req.nextUrl.pathname === '/'
+  )) {
+    return NextResponse.redirect(new URL('/chat', req.url));
+  }
+
   return res;
 }
 
 export const config = {
-  matcher: ['/chat/:path*'],
+  matcher: ['/', '/login', '/chat/:path*'],
 };
