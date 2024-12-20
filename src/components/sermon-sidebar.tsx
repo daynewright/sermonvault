@@ -119,7 +119,9 @@ export function SermonSidebar() {
         )}
       >
         <div className="p-4 border-b flex justify-between items-center">
-          {!isCollapsed && <h2 className="font-semibold">Sermons</h2>}
+          {!isCollapsed && (
+            <h2 className="font-semibold">Sermons ({sermons.length})</h2>
+          )}
           <Button
             variant="ghost"
             size="icon"

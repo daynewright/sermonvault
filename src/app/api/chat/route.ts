@@ -1,7 +1,8 @@
+import { OpenAI } from 'openai';
+import { ChatOpenAI } from '@langchain/openai';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { OpenAI } from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -10,7 +11,6 @@ const openai = new OpenAI({
 export async function POST(req: Request) {
   try {
     const { message } = await req.json();
-    console.log('Received message:', message);
     
     // Get current user
     const cookieStore = cookies();
@@ -18,16 +18,74 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      console.log('No user found');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
-    console.log('User ID:', user.id);
+
+    // Initialize the classifier model
+    const classifier = new ChatOpenAI({ 
+      modelName: 'gpt-3.5-turbo',
+      temperature: 0, // Keep it deterministic
+    });
+
+    // Check if context is needed
+    const classifierResponse = await classifier.invoke([
+      {
+        role: 'system',
+        content: `Determine if this question requires specific sermon context to answer accurately.
+        Respond with only "true" or "false".
+        Examples:
+        - "What does the Bible say about love?" -> false (general question)
+        - "What was the main point of last week's sermon?" -> true (needs context)
+        - "Can you explain John 3:16?" -> false (general biblical question)
+        - "What did the pastor say about forgiveness?" -> true (needs context)`
+      },
+      {
+        role: 'user',
+        content: message
+      }
+    ]);
+
+    const contextNeeded = String(classifierResponse.content || '').toLowerCase().includes('true');
+
+    console.log('Context needed:', contextNeeded);
+
+    // Initialize the main chat model
+    const chat = new ChatOpenAI({
+      modelName: 'gpt-4-turbo-preview',
+    });
+
+    if (!contextNeeded) {
+      const stream = await chat.stream([
+        { 
+          role: 'system', 
+          content: 'You are a helpful sermon assistant knowledgeable about theology and the Bible. Respond in a way that is helpful to the user. Refer to yourself as a sermon assistant.' 
+        },
+        { role: 'user', content: message }
+      ]);
+
+      // Create a readable stream that converts AIMessageChunks to strings
+      const readableStream = new ReadableStream({
+        async start(controller) {
+          for await (const chunk of stream) {
+            controller.enqueue(chunk.content);
+          }
+          controller.close();
+        },
+      });
+
+      return new Response(readableStream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    }
 
     // Generate embedding for the user's question
-    console.log('Generating embedding for:', message);
     const { data: embedding } = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: message,
@@ -67,13 +125,13 @@ export async function POST(req: Request) {
         {
           role: 'system',
           content: `You are a helpful assistant that answers questions about sermons. 
-          Use the provided sermon to answer questions accurately. 
+          Use the provided sermon to answer questions accurately.
+          Always answer respectfully and in a way that is helpful to the user.
           Focus on the most relevant parts (higher similarity scores).
-          If the sermon doesn't contain relevant information, say so.
           You are able to answer questions about the Bible.
           Use markdown with bullet points, quotes, tables and bold.`
         },
-        { role: 'user', content: `Sermon context: ${context}\n\nQuestion: ${message}` }
+        { role: 'user', content: `Sermon: ${context}\n\nQuestion: ${message}` }
       ],
       temperature: 0.7,
       stream: true,
