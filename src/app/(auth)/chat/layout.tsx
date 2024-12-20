@@ -4,7 +4,6 @@ import { AvatarDropdown } from '@/components/avatar-dropdown';
 import { InputFile } from '@/components/file-upload';
 import { Button } from '@/components/ui/button';
 import { FilePlus, NotebookPen } from 'lucide-react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import {
   Dialog,
   DialogContent,
@@ -12,48 +11,45 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useUser } from '@/hooks/use-user';
 
 const ChatLayout = ({ children }: { children: React.ReactNode }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [user, setUser] = useState<any>(null);
 
-  const supabase = createClientComponentClient();
-
-  useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-    };
-
-    getUser();
-
-    // Set up auth state change listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [supabase.auth]);
+  const { user } = useUser();
 
   const handleFileSelect = (file: File) => {
     setUploadedFile(file);
   };
 
-  const handleUpload = () => {
-    console.log('Uploading file:', uploadedFile);
+  const handleUpload = async () => {
+    if (!uploadedFile) return;
+
     setIsUploading(true);
-    setTimeout(() => {
+    const formData = new FormData();
+    formData.append('file', uploadedFile);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsUploading(false);
+        setUploadedFile(null);
+      } else {
+        setIsUploading(false);
+        setUploadedFile(null);
+      }
+    } catch (error) {
       setIsUploading(false);
-    }, 3000);
-    setUploadedFile(null);
+      setUploadedFile(null);
+    }
   };
 
   return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChatMessageList } from '@/components/ui/chat/chat-message-list';
 import {
   ChatBubble,
@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/chat/chat-bubble';
 import { ChatInput } from '@/components/ui/chat/chat-input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useUser } from '@/hooks/use-user';
+import { MarkdownResponse } from './markdown-response';
 
 type Message = {
   id: string;
@@ -18,78 +20,69 @@ type Message = {
 };
 
 export default function ChatSection() {
+  const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim()) return;
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current;
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
+  }, [messages]);
 
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      role: 'user',
-    };
-    setMessages((prev) => [...prev, userMessage]);
-
-    // Add loading message
-    const loadingMessage: Message = {
-      id: 'loading',
-      content: '',
-      role: 'assistant',
-      isLoading: true,
-    };
-    setMessages((prev) => [...prev, loadingMessage]);
-    setIsLoading(true);
-
+  const handleSendMessage = async (message: string) => {
     try {
+      setIsLoading(true);
+      // Add user message immediately
+      const userMessage = {
+        id: Date.now().toString(),
+        content: message,
+        role: 'user' as const,
+      };
+      setMessages((prev) => [...prev, userMessage]);
+
+      // Add loading message for AI
+      const loadingMessage = {
+        id: (Date.now() + 1).toString(),
+        content: '',
+        role: 'assistant' as const,
+        isLoading: true,
+      };
+      setMessages((prev) => [...prev, loadingMessage]);
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({ message }),
       });
 
       if (!response.ok) throw new Error('Failed to send message');
 
-      // Handle streaming response
       const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let assistantMessage = '';
+      if (!reader) throw new Error('No reader available');
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      let aiMessage = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-          const chunk = decoder.decode(value);
-          assistantMessage += chunk;
+        const text = new TextDecoder().decode(value);
+        aiMessage += text;
 
-          // Update the assistant's message as we receive chunks
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === 'loading'
-                ? { ...msg, content: assistantMessage, isLoading: false }
-                : msg
-            )
-          );
-        }
+        // Update the AI message as it streams in
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === loadingMessage.id
+              ? { ...msg, content: aiMessage, isLoading: false }
+              : msg
+          )
+        );
       }
-
-      // Replace loading message with final message
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === 'loading'
-            ? {
-                id: Date.now().toString(),
-                content: assistantMessage,
-                role: 'assistant',
-              }
-            : msg
-        )
-      );
     } catch (error) {
       console.error('Chat error:', error);
-      // Handle error state
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +90,7 @@ export default function ChatSection() {
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
-      <ScrollArea className="flex-1 px-4">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
         <ChatMessageList>
           {messages.map((message) => (
             <ChatBubble
@@ -105,13 +98,26 @@ export default function ChatSection() {
               variant={message.role === 'user' ? 'sent' : 'received'}
             >
               <ChatBubbleAvatar
-                fallback={message.role === 'user' ? 'US' : 'AI'}
+                src={
+                  message.role === 'user'
+                    ? user?.user_metadata.avatar_url
+                    : undefined
+                }
+                fallback={
+                  message.role === 'user'
+                    ? user?.user_metadata.name?.charAt(0)
+                    : 'AI'
+                }
               />
               <ChatBubbleMessage
                 variant={message.role === 'user' ? 'sent' : 'received'}
                 isLoading={message.isLoading}
               >
-                {message.content}
+                {message.role === 'assistant' ? (
+                  <MarkdownResponse content={message.content} />
+                ) : (
+                  message.content
+                )}
               </ChatBubbleMessage>
             </ChatBubble>
           ))}

@@ -110,6 +110,7 @@ export async function POST(req: Request) {
       success: true,
       documentsStored: documents.length,
       sermonId: sermonId,
+      filename: file.name,
       firstChunk: documents[0].content.slice(0, 100) + '...',
     });
 

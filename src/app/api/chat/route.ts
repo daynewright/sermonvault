@@ -34,13 +34,12 @@ export async function POST(req: Request) {
     });
 
     // Search with much lower threshold
-    console.log('Searching for relevant content');
     const { data: documents, error: searchError } = await supabase.rpc(
       'match_documents',
       {
         query_embedding: embedding[0].embedding,
         match_threshold: 0.1,    // Much lower threshold
-        match_count: 15,         // More results
+        match_count: 10,         // More results
         p_user_id: user.id
       }
     );
@@ -68,15 +67,13 @@ export async function POST(req: Request) {
         {
           role: 'system',
           content: `You are a helpful assistant that answers questions about sermons. 
-          Use the provided sermon context to answer questions accurately. 
+          Use the provided sermon to answer questions accurately. 
           Focus on the most relevant parts (higher similarity scores).
-          If asked about main points, structure your response clearly.
-          If the context doesn't contain relevant information, say so.
+          If the sermon doesn't contain relevant information, say so.
           You are able to answer questions about the Bible.
-          
-          Context from sermons (sorted by relevance):\n\n${context}`
+          Use markdown with bullet points, quotes, tables and bold.`
         },
-        { role: 'user', content: message }
+        { role: 'user', content: `Sermon context: ${context}\n\nQuestion: ${message}` }
       ],
       temperature: 0.7,
       stream: true,
