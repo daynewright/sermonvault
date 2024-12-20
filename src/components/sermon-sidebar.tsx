@@ -36,19 +36,26 @@ export function SermonSidebar() {
   const { toast } = useToast();
   const { user, isLoading: isUserLoading } = useUser();
   const [sermons, setSermons] = useState<Sermon[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
 
   const refreshCounter = useSermonsStore((state) => state.refreshCounter);
+  const setSermonCount = useSermonsStore((state) => state.setSermonCount);
+  const loadingSermons = useSermonsStore((state) => state.loadingSermons);
+  const setLoadingSermons = useSermonsStore((state) => state.setLoadingSermons);
 
   useEffect(() => {
     fetchSermons();
   }, [user, isUserLoading, refreshCounter]);
 
+  useEffect(() => {
+    setSermonCount(sermons.length);
+  }, [sermons]);
+
   const fetchSermons = async () => {
     if (!user) return;
+    setLoadingSermons(true);
 
     try {
       const response = await fetch('/api/sermons');
@@ -63,7 +70,7 @@ export function SermonSidebar() {
         description: 'Failed to load sermons',
       });
     } finally {
-      setIsLoading(false);
+      setLoadingSermons(false);
     }
   };
 
@@ -137,7 +144,7 @@ export function SermonSidebar() {
         </div>
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-2">
-            {isLoading ? (
+            {loadingSermons ? (
               <p className="text-sm text-muted-foreground">Loading...</p>
             ) : sermons.length === 0 ? (
               <p className="text-sm text-muted-foreground">

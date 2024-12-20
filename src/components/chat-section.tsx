@@ -11,6 +11,8 @@ import { ChatInput } from '@/components/ui/chat/chat-input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUser } from '@/hooks/use-user';
 import { MarkdownResponse } from './markdown-response';
+import { EmptyState } from './empty-state';
+import { useSermonsStore } from '@/store/use-sermons-store';
 
 type Message = {
   id: string;
@@ -24,6 +26,8 @@ export default function ChatSection() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const sermonCount = useSermonsStore((state) => state.sermonCount);
 
   const scrollToBottom = () => {
     // Find the Radix UI viewport element
@@ -103,6 +107,7 @@ export default function ChatSection() {
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
         <ChatMessageList>
+          {messages.length === 0 && <EmptyState />}
           {messages.map((message) => (
             <ChatBubble
               key={message.id}
@@ -136,11 +141,13 @@ export default function ChatSection() {
       </ScrollArea>
 
       <div className="border-t p-4">
-        <ChatInput
-          placeholder="Ask me about your sermons..."
-          onSend={handleSendMessage}
-          disabled={isLoading}
-        />
+        {sermonCount > 0 && (
+          <ChatInput
+            placeholder="Ask me about your sermons..."
+            onSend={handleSendMessage}
+            disabled={isLoading}
+          />
+        )}
       </div>
     </div>
   );

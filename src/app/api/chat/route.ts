@@ -91,13 +91,13 @@ export async function POST(req: Request) {
       input: message,
     });
 
-    // Search with much lower threshold
+    // Search with slightly higher threshold and fewer results
     const { data: documents, error: searchError } = await supabase.rpc(
       'match_documents',
       {
         query_embedding: embedding[0].embedding,
-        match_threshold: 0.1, 
-        match_count: 10,       
+        match_threshold: 0.3,  // Increased from 0.1
+        match_count: 5,        // Reduced from 10
         p_user_id: user.id
       }
     );
@@ -109,11 +109,17 @@ export async function POST(req: Request) {
 
     console.log('Found documents:', documents?.length || 0);
 
-    // Sort documents by similarity and format context
-    const context = documents
+    // Sort documents by similarity and format context with limits
+    let context = documents
       ?.sort((a: any, b: any) => b.similarity - a.similarity)
+      ?.slice(0, 3)  // Take only top 3 most relevant
       ?.map((doc: any) => `[Similarity: ${doc.similarity.toFixed(2)}]\n${doc.content}`)
       .join('\n\n---\n\n');
+
+    // Limit context length if too long
+    if (context?.length > 4000) {
+      context = context.slice(0, 4000) + '...';
+    }
 
     console.log('Context length:', context?.length || 0);
 

@@ -172,7 +172,7 @@ export default function LandingPage() {
                 icon: <Upload className="h-12 w-12 mb-6 text-primary" />,
                 title: 'Easy Upload',
                 description:
-                  'Quickly upload your sermon transcripts or audio files with our intuitive interface.',
+                  'Quickly upload your sermon files with our intuitive interface.',
               },
               {
                 icon: <Search className="h-12 w-12 mb-6 text-primary" />,
@@ -248,8 +248,7 @@ export default function LandingPage() {
               {
                 number: '1',
                 title: 'Upload Sermons',
-                description:
-                  'Upload your sermon transcripts or audio files to SermonVault.',
+                description: 'Upload your sermon files to SermonVault.',
               },
               {
                 number: '2',

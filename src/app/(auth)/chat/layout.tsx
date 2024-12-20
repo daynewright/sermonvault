@@ -17,7 +17,7 @@ const ChatLayout = ({ children }: { children: React.ReactNode }) => {
             <NotebookPen className="w-6 h-6" />
             SermonVault
           </div>
-          <UploadSermonDialog />
+          <UploadSermonDialog buttonVariant="ghost" />
           <AvatarDropdown
             email={user?.email}
             image={user?.user_metadata?.avatar_url}

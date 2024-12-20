@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FilePlus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, ButtonProps } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,11 @@ import { InputFile } from '@/components/file-upload';
 import { useToast } from '@/hooks/use-toast';
 import { useSermonsStore } from '@/store/use-sermons-store';
 
-export function UploadSermonDialog() {
+export function UploadSermonDialog({
+  buttonVariant,
+}: {
+  buttonVariant?: ButtonProps['variant'];
+}) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -69,7 +73,7 @@ export function UploadSermonDialog() {
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="mr-4">
+        <Button variant={buttonVariant} size="sm" className="mr-4">
           <FilePlus className="w-4 h-4 mr-2" />
           Upload a sermon
         </Button>
@@ -79,9 +83,11 @@ export function UploadSermonDialog() {
           Upload a sermon
         </DialogTitle>
         <DialogDescription className="mt-2 mb-4">
-          Adding a sermon will help the AI understand your context. You only
-          have to upload it once and the AI will be able to use it for future
-          searches. Once added you can ask questions about the sermon.
+          Adding your sermons will allow the AI to answer any questions about
+          them. You only have to upload it once and the AI will be able to use
+          it for future searches. Once added you can ask questions about the
+          sermon. If you decide to delete a sermon, it will be removed from the
+          AI&apos;s memory.
         </DialogDescription>
         {isUploading ? (
           <div className="flex-1 overflow-y-auto">
