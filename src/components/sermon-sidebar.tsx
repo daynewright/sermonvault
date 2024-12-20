@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useSermonsStore } from '@/store/use-sermons-store';
 
 type Sermon = {
   id: string;
@@ -40,9 +41,11 @@ export function SermonSidebar() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
 
+  const refreshCounter = useSermonsStore((state) => state.refreshCounter);
+
   useEffect(() => {
     fetchSermons();
-  }, [user, isUserLoading]);
+  }, [user, isUserLoading, refreshCounter]);
 
   const fetchSermons = async () => {
     if (!user) return;
