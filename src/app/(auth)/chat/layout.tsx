@@ -3,7 +3,7 @@
 import { AvatarDropdown } from '@/components/avatar-dropdown';
 import { InputFile } from '@/components/file-upload';
 import { Button } from '@/components/ui/button';
-import { Brain, FilePlus, NotebookPen } from 'lucide-react';
+import { FilePlus, NotebookPen } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import {
   Dialog,
@@ -31,6 +31,7 @@ const ChatLayout = ({ children }: { children: React.ReactNode }) => {
     setTimeout(() => {
       setIsUploading(false);
     }, 3000);
+    setUploadedFile(null);
   };
 
   return (
