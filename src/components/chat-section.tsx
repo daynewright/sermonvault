@@ -1,11 +1,11 @@
-import { ChatMessageList } from '@/components/ui/chat/chat-message-list'
+import { ChatMessageList } from '@/components/ui/chat/chat-message-list';
 import {
   ChatBubble,
   ChatBubbleAvatar,
   ChatBubbleMessage,
-} from '@/components/ui/chat/chat-bubble'
-import { ChatInput } from '@/components/ui/chat/chat-input'
-import { ScrollArea } from '@/components/ui/scroll-area'
+} from '@/components/ui/chat/chat-bubble';
+import { ChatInput } from '@/components/ui/chat/chat-input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function ChatSection() {
   return (
@@ -38,5 +38,5 @@ export default function ChatSection() {
         <ChatInput placeholder="Ask me about your sermons..." />
       </div>
     </div>
-  )
+  );
 }
