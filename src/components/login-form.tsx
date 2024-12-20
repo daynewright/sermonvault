@@ -10,17 +10,20 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { NotebookPen } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<'div'>) {
-  const handleLogin = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    await signIn('google', {
-      redirect: false,
-      callbackUrl: '/chat',
+  const supabase = createClientComponentClient();
+
+  const handleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
   };
 

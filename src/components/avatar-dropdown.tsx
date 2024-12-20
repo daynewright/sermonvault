@@ -1,26 +1,34 @@
-'use client'
+'use client';
 
-import Image from "next/image"
-import { LogOut, Settings, User } from "lucide-react"
-import { signOut } from "next-auth/react"
-import { Button } from "@/components/ui/button"
-import { 
+import Image from 'next/image';
+import { LogOut, Settings, User } from 'lucide-react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Button } from '@/components/ui/button';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useRouter } from 'next/navigation';
 
-type  Props = {
-  email?: string | null
-  image?: string | null
-  name?: string | null
-}
+type Props = {
+  email?: string | null;
+  image?: string | null;
+  name?: string | null;
+};
 
 export function AvatarDropdown({ email, image, name }: Props) {
+  const supabase = createClientComponentClient();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
 
   return (
     <DropdownMenu>
@@ -29,15 +37,13 @@ export function AvatarDropdown({ email, image, name }: Props) {
           {image ? (
             <Image
               src={image}
-              alt={name || "User avatar"}
+              alt={name || 'User avatar'}
               fill
               className="rounded-full object-cover"
             />
           ) : (
             <Avatar>
-              <AvatarFallback>
-                {name?.charAt(0) || "U"}
-              </AvatarFallback>
+              <AvatarFallback>{name?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
           )}
         </Button>
@@ -61,11 +67,11 @@ export function AvatarDropdown({ email, image, name }: Props) {
           <span>Settings</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()}>
+        <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
-} 
+  );
+}
