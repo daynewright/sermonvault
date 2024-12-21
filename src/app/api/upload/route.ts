@@ -12,32 +12,49 @@ const openai = new OpenAI({
 
 async function processFile(file: File, userId: string) {
   try {
-    // Generate a single sermon ID for all chunks
+    // Generate IDs and filenames
     const sermonId = randomUUID();
+    const timestamp = Date.now();
+    const fileName = `${userId}/${timestamp}-${file.name.replace(/\s+/g, '_')}`;
 
-    // Load and parse PDF
+    // Create Supabase client
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // 1. First, upload the file to Supabase Storage
+    const { error: uploadError } = await supabase
+      .storage
+      .from('sermons')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    // 2. Process PDF content
     const loader = new PDFLoader(file);
     const docs = await loader.load();
     const text = docs.map((doc) => doc.pageContent).join(' ');
 
-    // Split text into chunks
+    // 3. Split text into chunks
     const splitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
       chunkOverlap: 200,
     });
     const chunks = await splitter.splitText(text);
 
-    // Get embeddings for all chunks
+    // 4. Get embeddings for all chunks
     const embeddings = await Promise.all(
-      chunks.map(chunk => 
-        openai.embeddings.create({
+      chunks.map(chunk => {
+        return openai.embeddings.create({
           model: 'text-embedding-3-small',
           input: chunk,
-        })
-      )
+        });
+      })
     );
 
-    // Prepare documents for storage
+    // 5. Prepare documents for storage with file information
     const documents = chunks.map((chunk, index) => ({
       content: chunk,
       embedding: embeddings[index].data[0].embedding,
@@ -49,9 +66,12 @@ async function processFile(file: File, userId: string) {
         uploadedAt: new Date().toISOString(),
       },
       user_id: userId,
+      file_path: fileName,
+      file_name: file.name,
+      file_size: file.size
     }));
 
-    return { documents, sermonId };
+    return { documents, sermonId, fileName };
   } catch (error) {
     console.error('PDF processing error:', error);
     throw error;
@@ -90,7 +110,7 @@ export async function POST(req: Request) {
     }
 
     // Process the file and get documents with embeddings
-    const { documents, sermonId } = await processFile(file, user.id);
+    const { documents, sermonId, fileName } = await processFile(file, user.id);
 
     // Store documents in Supabase
     const { error } = await supabase
@@ -99,6 +119,12 @@ export async function POST(req: Request) {
       .select();
 
     if (error) {
+      // If database insert fails, clean up the uploaded file
+      await supabase
+        .storage
+        .from('sermons')
+        .remove([fileName]);
+
       console.error('Supabase storage error:', error);
       return NextResponse.json(
         { error: 'Failed to store documents' },
@@ -111,6 +137,7 @@ export async function POST(req: Request) {
       documentsStored: documents.length,
       sermonId: sermonId,
       filename: file.name,
+      filePath: fileName,
       firstChunk: documents[0].content.slice(0, 100) + '...',
     });
 

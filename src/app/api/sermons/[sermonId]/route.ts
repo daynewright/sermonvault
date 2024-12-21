@@ -21,8 +21,30 @@ export async function DELETE(
       );
     }
 
+    // First, get the file path from the documents table
+    const { data: documentData } = await supabase
+      .from('documents')
+      .select('file_path')
+      .eq('sermon_id', sermonId)
+      .eq('user_id', user.id)
+      .limit(1)
+      .single();
+
+    if (documentData?.file_path) {
+      // Delete the file from storage
+      const { error: storageError } = await supabase
+        .storage
+        .from('sermons')
+        .remove([documentData.file_path]);
+
+      if (storageError) {
+        console.error('Error deleting file from storage:', storageError);
+        // Continue with document deletion even if storage deletion fails
+      }
+    }
+
     // Delete all document chunks for this sermon
-    const { error } = await supabase
+    const { error: dbError } = await supabase
       .from('documents')
       .delete()
       .match({ 
@@ -30,9 +52,9 @@ export async function DELETE(
         user_id: user.id 
       });
 
-    if (error) {
-      console.error('Error deleting sermon:', error);
-      throw error;
+    if (dbError) {
+      console.error('Error deleting sermon:', dbError);
+      throw dbError;
     }
 
     return NextResponse.json({ success: true });
