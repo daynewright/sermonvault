@@ -176,7 +176,16 @@ export async function POST(req: Request) {
       },
     });
 
-  } catch (error) {
+  } catch (error: any) {
+    // Check for billing/quota errors
+    if (error?.status === 429 || error?.error?.code === 'insufficient_quota') {
+      return NextResponse.json(
+        { error: 'AI service is temporarily unavailable. Please try again later.' },
+        { status: 429 }
+      );
+    }
+    
+    // Other errors
     console.error('Chat error:', error);
     return NextResponse.json(
       { error: 'Failed to process chat message' },
