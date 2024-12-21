@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,7 @@ import {
   CalendarIcon,
   MapPinIcon,
   BookOpen,
+  Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/hooks/use-user';
@@ -32,6 +33,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
 
 type Sermon = {
   id: string;
@@ -53,6 +55,7 @@ export function SermonSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const refreshCounter = useSermonsStore((state) => state.refreshCounter);
   const setSermonCount = useSermonsStore((state) => state.setSermonCount);
@@ -115,6 +118,20 @@ export function SermonSidebar() {
     }
   };
 
+  const filteredSermons = useMemo(() => {
+    if (!searchQuery.trim()) return sermons;
+
+    return sermons.filter(
+      (sermon) =>
+        sermon.metadata.title
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        sermon.metadata.preacher
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+    );
+  }, [sermons, searchQuery]);
+
   if (isUserLoading) {
     return (
       <div className="w-64 border-r h-[calc(100vh-4rem)] flex items-center justify-center">
@@ -141,7 +158,9 @@ export function SermonSidebar() {
       >
         <div className="p-4 border-b flex justify-between items-center">
           {!isCollapsed && (
-            <h2 className="font-semibold">Sermons ({sermons.length})</h2>
+            <div className="text-sm font-medium">
+              Sermons ({filteredSermons.length})
+            </div>
           )}
           <Button
             variant="ghost"
@@ -156,16 +175,31 @@ export function SermonSidebar() {
             )}
           </Button>
         </div>
+
         <ScrollArea className="flex-1">
+          {!isCollapsed && (
+            <div className="p-4 border-b">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search sermons..."
+                  className="h-8 w-full pl-7 text-xs"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="p-4 space-y-2">
             {loadingSermons ? (
               <p className="text-sm text-muted-foreground">Loading...</p>
-            ) : sermons.length === 0 ? (
+            ) : filteredSermons.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {isCollapsed ? 'Empty' : 'No sermons found'}
               </p>
             ) : (
-              sermons.map((sermon) => (
+              filteredSermons.map((sermon) => (
                 <Popover key={sermon.id}>
                   <PopoverTrigger asChild>
                     <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent group max-w-[230px] cursor-pointer">
