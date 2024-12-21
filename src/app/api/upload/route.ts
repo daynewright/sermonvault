@@ -10,9 +10,35 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+async function extractMetadata(text: string) {
+  const response = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages: [
+      {
+        role: "system",
+        content: `Extract sermon metadata from the provided text. 
+        Return ONLY a JSON object with these fields:
+        - title: The sermon title
+        - preacher: The preacher's name
+        - date: The sermon date (strictly in YYYY-MM-DD format, e.g., "2024-03-21". If date format is unclear, return null)
+        - location: The church/location where preached
+        Include a confidence score (0-1) for each field.
+        If a field is not found, use null.`
+      },
+      {
+        role: "user",
+        content: `Extract metadata from this sermon text:\n\n${text.substring(0, 2000)}`
+      }
+    ],
+    temperature: 0,
+    response_format: { type: "json_object" }
+  });
+
+  return JSON.parse(response.choices[0].message.content || '{}');
+}
+
 async function processFile(file: File, userId: string) {
   try {
-    // Generate IDs and filenames
     const sermonId = randomUUID();
     const timestamp = Date.now();
     const fileName = `${userId}/${timestamp}-${file.name.replace(/\s+/g, '_')}`;
@@ -21,57 +47,89 @@ async function processFile(file: File, userId: string) {
     const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
-    // 1. First, upload the file to Supabase Storage
+    // Upload file first
     const { error: uploadError } = await supabase
       .storage
       .from('sermons')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
+      .upload(fileName, file);
 
     if (uploadError) throw uploadError;
 
-    // 2. Process PDF content
+    // Process PDF content
     const loader = new PDFLoader(file);
     const docs = await loader.load();
-    const text = docs.map((doc) => doc.pageContent).join(' ');
+    const firstPageText = docs[0].pageContent;
+    
+    // Get AI-extracted metadata
+    const extractedMetadata = await extractMetadata(firstPageText);
 
-    // 3. Split text into chunks
+    // Simplify metadata handling - just use extracted metadata
+    const finalMetadata = {
+      title: extractedMetadata.title || 'Untitled Sermon',
+      preacher: extractedMetadata.preacher || 'Unknown Preacher',
+      date: extractedMetadata.date || null,
+      location: extractedMetadata.location || null,
+      extracted: extractedMetadata,
+    };
+
+    // Optional: Validate required fields
+    if (!finalMetadata.title || !finalMetadata.preacher || !finalMetadata.date) {
+      throw new Error('Missing required metadata fields');
+    }
+
+    // Split text into chunks
     const splitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
       chunkOverlap: 200,
     });
+    const text = docs.map((doc) => doc.pageContent).join(' ');
     const chunks = await splitter.splitText(text);
 
-    // 4. Get embeddings for all chunks
+    // Get embeddings for all chunks
     const embeddings = await Promise.all(
       chunks.map(chunk => {
+        const textForEmbedding = `Title: ${finalMetadata.title}
+Preacher: ${finalMetadata.preacher}
+Date: ${finalMetadata.date}${finalMetadata.location ? `\nLocation: ${finalMetadata.location}` : ''}
+Content: ${chunk}`.trim();
+
         return openai.embeddings.create({
           model: 'text-embedding-3-small',
-          input: chunk,
+          input: textForEmbedding,
         });
       })
     );
 
-    // 5. Prepare documents for storage with file information
+    // Prepare documents for storage
     const documents = chunks.map((chunk, index) => ({
       content: chunk,
       embedding: embeddings[index].data[0].embedding,
       sermon_id: sermonId,
-      metadata: {
-        filename: file.name,
-        pageCount: docs.length,
-        chunkIndex: index,
-        uploadedAt: new Date().toISOString(),
-      },
       user_id: userId,
       file_path: fileName,
       file_name: file.name,
-      file_size: file.size
+      file_size: file.size,
+      // Metadata fields
+      title: finalMetadata.title,
+      preacher: finalMetadata.preacher,
+      sermon_date: finalMetadata.date ? new Date(finalMetadata.date).toISOString() : null,
+      location: finalMetadata.location,
+      metadata_confidence: extractedMetadata.confidence,
+      // Additional metadata
+      metadata: {
+        extracted: extractedMetadata,
+        pageCount: docs.length,
+        chunkIndex: index,
+        uploadedAt: new Date().toISOString(),
+      }
     }));
 
-    return { documents, sermonId, fileName };
+    return { 
+      documents, 
+      sermonId, 
+      fileName,
+      metadata: finalMetadata 
+    };
   } catch (error) {
     console.error('PDF processing error:', error);
     throw error;
@@ -109,8 +167,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Process the file and get documents with embeddings
-    const { documents, sermonId, fileName } = await processFile(file, user.id);
+    // Process the file - removed user metadata
+    const { documents, sermonId, fileName, metadata } = await processFile(file, user.id);
 
     // Store documents in Supabase
     const { error } = await supabase
@@ -139,6 +197,7 @@ export async function POST(req: Request) {
       filename: file.name,
       filePath: fileName,
       firstChunk: documents[0].content.slice(0, 100) + '...',
+      metadata: metadata
     });
 
   } catch (error) {

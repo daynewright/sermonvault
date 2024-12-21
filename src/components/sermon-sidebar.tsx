@@ -10,6 +10,9 @@ import {
   PanelLeftOpen,
   Trash2,
   Loader2,
+  CalendarIcon,
+  MapPinIcon,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/hooks/use-user';
@@ -24,12 +27,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useSermonsStore } from '@/store/use-sermons-store';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 type Sermon = {
   id: string;
-  filename: string;
-  uploadedAt: string;
   pageCount: number;
+  metadata: {
+    title: string;
+    preacher: string;
+    date: string;
+    location: string;
+  };
+  filePath: string;
+  uploadedAt: string;
 };
 
 export function SermonSidebar() {
@@ -152,35 +166,112 @@ export function SermonSidebar() {
               </p>
             ) : (
               sermons.map((sermon) => (
-                <div
-                  key={sermon.id}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent group max-w-[230px]"
-                >
-                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                  {!isCollapsed && (
-                    <>
-                      <div className="text-sm truncate flex-1">
-                        {sermon.filename} ({sermon.pageCount} pages)
+                <Popover key={sermon.id}>
+                  <PopoverTrigger asChild>
+                    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent group max-w-[230px] cursor-pointer">
+                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                      {!isCollapsed && (
+                        <>
+                          <div className="text-sm truncate flex-1">
+                            {sermon.metadata.title}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSermonToDelete(sermon);
+                            }}
+                            disabled={deletingId === sermon.id}
+                          >
+                            {deletingId === sermon.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-80"
+                    align="start"
+                    sideOffset={5}
+                    alignOffset={20}
+                  >
+                    <div className="space-y-4">
+                      <div className="border-b pb-2">
+                        <h4 className="text-xs font-semibold leading-none mb-1">
+                          {sermon.metadata.title}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          by {sermon.metadata.preacher}
+                        </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSermonToDelete(sermon);
-                        }}
-                        disabled={deletingId === sermon.id}
-                      >
-                        {deletingId === sermon.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+
+                      <div className="space-y-1">
+                        {sermon.metadata.date && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                            <span>
+                              {new Date(
+                                sermon.metadata.date
+                              ).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })}
+                            </span>
+                          </div>
                         )}
-                      </Button>
-                    </>
-                  )}
-                </div>
+                        {sermon.metadata.location && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <MapPinIcon className="h-3 w-3 text-muted-foreground" />
+                            <span>{sermon.metadata.location}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-xs">
+                          <BookOpen className="h-3 w-3 text-muted-foreground" />
+                          <span>{sermon.pageCount} pages</span>
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-2 mt-1">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                            <span>
+                              Added{' '}
+                              {new Date(sermon.uploadedAt).toLocaleDateString()}
+                            </span>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[10px] text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                onClick={() => {}}
+                              >
+                                View File
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSermonToDelete(sermon);
+                                }}
+                              >
+                                Delete Sermon
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               ))
             )}
           </div>
@@ -195,7 +286,8 @@ export function SermonSidebar() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete &quot;{sermonToDelete?.filename}
+              This will permanently delete &quot;
+              {sermonToDelete?.metadata.title}
               &quot; and it will no longer be searchable with AI.
             </AlertDialogDescription>
           </AlertDialogHeader>

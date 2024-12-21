@@ -18,10 +18,11 @@ export async function GET() {
     // Get unique sermons with their metadata
     const { data: sermons, error } = await supabase
       .from('documents')
-      .select('sermon_id, metadata')
+      .select('sermon_id, metadata, file_path')
       .eq('user_id', user.id)
       .eq('metadata->chunkIndex', 0) // Get only first chunk to avoid duplicates
       .order('created_at', { ascending: false });
+
 
     if (error) {
       console.error('Error fetching sermons:', error);
@@ -31,9 +32,10 @@ export async function GET() {
     // Format the response
     const formattedSermons = sermons.map(sermon => ({
       id: sermon.sermon_id,
-      filename: sermon.metadata.filename,
-      uploadedAt: sermon.metadata.uploadedAt,
-      pageCount: sermon.metadata.pageCount
+      metadata: sermon.metadata.extracted,
+      filePath: sermon.file_path,
+      pageCount: sermon.metadata.pageCount,
+      uploadedAt: sermon.metadata.uploadedAt
     }));
 
     return NextResponse.json(formattedSermons);
