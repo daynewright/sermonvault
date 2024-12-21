@@ -3,10 +3,13 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function DELETE(
-  req: Request,
-  { params }: { params: { sermonId: string } }
+  request: Request,
+  { params }: { params: Promise<{ sermonId: string }> }
 ) {
   try {
+    const resolvedParams = await params;
+    const sermonId = resolvedParams.sermonId;
+    
     const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     
@@ -23,7 +26,7 @@ export async function DELETE(
       .from('documents')
       .delete()
       .match({ 
-        sermon_id: params.sermonId,
+        sermon_id: sermonId,
         user_id: user.id 
       });
 
