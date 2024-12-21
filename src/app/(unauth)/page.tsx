@@ -302,6 +302,7 @@ export default function LandingPage() {
             size="lg"
             variant="secondary"
             className="text-lg px-8 py-6 rounded-full"
+            onClick={() => router.push('/login')}
           >
             Start Your Free Trial
           </Button>

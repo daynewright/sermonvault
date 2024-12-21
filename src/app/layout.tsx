@@ -6,6 +6,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata = {
   title: 'SermonVault',
   description: 'Sermon insights powered by AI search',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
