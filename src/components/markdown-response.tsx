@@ -1,17 +1,13 @@
 'use client';
 
 import ReactMarkdown from 'react-markdown';
-import { cn } from '@/lib/utils';
 
 interface MarkdownResponseProps {
   content: string;
   className?: string;
 }
 
-export function MarkdownResponse({
-  content,
-  className,
-}: MarkdownResponseProps) {
+export function MarkdownResponse({ content }: MarkdownResponseProps) {
   return (
     <ReactMarkdown
       components={{

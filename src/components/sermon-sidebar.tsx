@@ -195,8 +195,8 @@ export function SermonSidebar() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{sermonToDelete?.filename}" and it
-              will no longer be searchable with AI.
+              This will permanently delete &quot;{sermonToDelete?.filename}
+              &quot; and it will no longer be searchable with AI.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

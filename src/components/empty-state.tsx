@@ -1,7 +1,6 @@
 'use client';
 
 import { useSermonsStore } from '@/store/use-sermons-store';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,

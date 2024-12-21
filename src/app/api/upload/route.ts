@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     const { documents, sermonId } = await processFile(file, user.id);
 
     // Store documents in Supabase
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('documents')
       .insert(documents)
       .select();
