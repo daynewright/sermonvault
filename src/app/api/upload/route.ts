@@ -65,15 +65,15 @@ async function processFile(file: File, userId: string) {
 
     // Simplify metadata handling - just use extracted metadata
     const finalMetadata = {
+      ...extractedMetadata,
       title: extractedMetadata.title || 'Untitled Sermon',
       preacher: extractedMetadata.preacher || 'Unknown Preacher',
       date: extractedMetadata.date || null,
       location: extractedMetadata.location || null,
-      extracted: extractedMetadata,
     };
 
     // Optional: Validate required fields
-    if (!finalMetadata.title || !finalMetadata.preacher || !finalMetadata.date) {
+    if (!finalMetadata.title || !finalMetadata.preacher) {
       throw new Error('Missing required metadata fields');
     }
 
@@ -117,7 +117,7 @@ Content: ${chunk}`.trim();
       metadata_confidence: extractedMetadata.confidence,
       // Additional metadata
       metadata: {
-        extracted: extractedMetadata,
+        extracted: finalMetadata,
         pageCount: docs.length,
         chunkIndex: index,
         uploadedAt: new Date().toISOString(),
