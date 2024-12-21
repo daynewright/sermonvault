@@ -67,7 +67,7 @@ export default function ChatSection() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, messages }),
       });
 
       if (!response.ok) throw new Error('Failed to send message');
@@ -106,7 +106,7 @@ export default function ChatSection() {
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
-        <ChatMessageList>
+        <ChatMessageList className="text-sm">
           {messages.length === 0 && <EmptyState />}
           {messages.map((message) => (
             <ChatBubble

@@ -10,8 +10,16 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { message } = await req.json();
+    const { message, messages } = await req.json();
     
+    // Limit conversation history
+    const limitedMessages = messages
+      .slice(-5) // Keep only last 5 messages
+      .filter((msg: any) => {
+        // Optionally filter out messages that are too long
+        return msg.content.length <= 500;
+      });
+
     // Get current user
     const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
@@ -61,8 +69,9 @@ export async function POST(req: Request) {
       const stream = await chat.stream([
         { 
           role: 'system', 
-          content: 'You are a helpful sermon assistant knowledgeable about theology and the Bible. Respond in a way that is helpful to the user. Refer to yourself as a sermon assistant.' 
+          content: 'You are a helpful sermon assistant knowledgeable about theology and the Bible. Respond in a way that is helpful to the user, cheerful and friendly. Refer to yourself as a sermon assistant.' 
         },
+        ...limitedMessages,
         { role: 'user', content: message }
       ]);
 
@@ -123,22 +132,28 @@ export async function POST(req: Request) {
 
     console.log('Context length:', context?.length || 0);
 
-    // Send to ChatGPT with better prompt
-    console.log('Sending to ChatGPT');
+    const systemPrompt = `You are a helpful sermon assistant knowledgeable about theology and the Bible with deep knowledge of the user's sermons. 
+    You have access to and have analyzed their sermon content. Use this knowledge to provide accurate, 
+    detailed responses about their sermons. Always respond in a natural, conversational way.
+    
+    Here is the relevant sermon content you've analyzed:
+    ${context}
+    
+    Remember to:
+    - Use markdown when appropriate and bold important information
+    - ALWAYS mention the sermon title and date in your response if known
+    - Speak confidently about the sermon content you know
+    - Don't mention embeddings, documents, or similarity scores
+    - If you're not sure about something, say so naturally without referring to missing documents
+    - Keep responses focused on the sermon content you know about`;
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
       messages: [
-        {
-          role: 'system',
-          content: `You are a helpful assistant that answers questions about sermons. 
-          Use the provided sermon to answer questions accurately.
-          Always answer respectfully and in a way that is helpful to the user.
-          Focus on the most relevant parts (higher similarity scores).
-          You are able to answer questions about the Bible.
-          Use markdown with bullet points, quotes, tables and bold.`
-        },
-        { role: 'user', content: `Sermon: ${context}\n\nQuestion: ${message}` }
+        { role: "system", content: systemPrompt },
+        ...limitedMessages,
+        { role: "user", content: message }
       ],
+      model: "gpt-3.5-turbo",
       temperature: 0.7,
       stream: true,
     });
