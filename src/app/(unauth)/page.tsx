@@ -254,13 +254,13 @@ export default function LandingPage() {
                 number: '2',
                 title: 'AI Processing',
                 description:
-                  'Our AI system vectorizes and analyzes your sermon content.',
+                  'Our AI reads and understands your sermon, making it easy to find later.',
               },
               {
                 number: '3',
                 title: 'Ask Questions',
                 description:
-                  'Use natural language to ask questions about your sermons.',
+                  'Ask questions about your sermons and get answers in seconds.',
               },
               {
                 number: '4',
