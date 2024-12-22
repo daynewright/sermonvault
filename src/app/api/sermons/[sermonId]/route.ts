@@ -1,8 +1,7 @@
-import { NextApiRequest } from 'next';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/clients/supabase';
 
-export async function DELETE(req: NextApiRequest, { params }: { params: { sermonId: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { sermonId: string } }) {
   try {
     const supabase = createServerSupabaseClient();
     const sermonId = params.sermonId;
