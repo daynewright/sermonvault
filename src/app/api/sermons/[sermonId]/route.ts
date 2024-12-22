@@ -1,13 +1,11 @@
+import { NextApiRequest } from 'next';
+import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/clients/supabase';
-import { NextRequest, NextResponse } from 'next/server';
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: { sermonId: string } }
-): Promise<NextResponse> {
+export async function DELETE(req: NextApiRequest, { params }: { params: { sermonId: string } }) {
   try {
     const supabase = createServerSupabaseClient();
-    const sermonId = context.params.sermonId;
+    const sermonId = params.sermonId;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
