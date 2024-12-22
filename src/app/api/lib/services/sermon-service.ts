@@ -2,8 +2,8 @@ import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { randomUUID } from 'crypto';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { extractSermonMetadata } from '@/lib/utils/sermon-parser';
-import { getOpenAIClient } from '@/lib/clients/openai';
+import { extractSermonMetadata } from '@/app/api/lib/utils/sermon-parser';
+import { getOpenAIClient } from '@/app/api/lib/clients/openai';
 
 async function isSermonContent(text: string): Promise<boolean> {
   const openai = getOpenAIClient();
@@ -88,7 +88,7 @@ export async function processSermonUpload(
       key_points: extractedMetadata.key_points || [],
       illustrations: extractedMetadata.illustrations || [],
       preacher: extractedMetadata.preacher || userName,
-      location: extractedMetadata.location || 'Unknown Location'
+      location: extractedMetadata.location || 'Unknown Location',
     };
 
     // 4. Create sermon record with confidence scores
@@ -102,6 +102,7 @@ export async function processSermonUpload(
         file_type: file.type,
         file_name: file.name,
         file_size: file.size,
+        file_pages: docs.length,
         user_id: userId
       })
       .select()

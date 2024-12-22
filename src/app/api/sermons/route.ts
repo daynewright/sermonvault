@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/clients/supabase';
+import { createServerSupabaseClient } from '@/app/api/lib/clients/supabase';
 
 export async function GET() {
   try {
@@ -36,7 +36,7 @@ export async function GET() {
       filePath: sermon.file_path,
       fileName: sermon.file_name,
       fileSize: sermon.file_size,
-      pageCount: sermon.page_count,
+      pageCount: sermon.file_pages,
       uploadedAt: sermon.created_at
     }));
 

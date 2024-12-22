@@ -1,7 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { processSermonUpload } from '@/lib/services/sermon-service';
+import { processSermonUpload } from '@/app/api/lib/services/sermon-service';
 
 export async function POST(req: Request) {
   try {

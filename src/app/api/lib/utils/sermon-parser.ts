@@ -1,5 +1,5 @@
 import { findBibleReferences } from './bible-parser';
-import { getOpenAIClient } from '@/lib/clients/openai';
+import { getOpenAIClient } from '@/app/api/lib/clients/openai';
 
 export async function extractSermonMetadata(text: string) {
   const foundReferences = findBibleReferences(text);

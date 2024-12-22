@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/clients/supabase';
+import { createServerSupabaseClient } from '@/app/api/lib/clients/supabase';
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ sermonId: string }> }) {
   try {
