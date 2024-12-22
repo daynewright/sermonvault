@@ -53,9 +53,10 @@ export function UploadSermonDialog({
       } else {
         setIsUploading(false);
         setUploadedFile(null);
+        const errorData = await response.json();
         toast({
           variant: 'destructive',
-          title: 'Failed to add sermon to AI',
+          title: errorData.error || 'Failed to add sermon to AI',
           description: uploadedFile?.name,
         });
       }
@@ -64,7 +65,8 @@ export function UploadSermonDialog({
       setUploadedFile(null);
       toast({
         variant: 'destructive',
-        title: 'Failed to add sermon to AI',
+        title:
+          error instanceof Error ? error.message : 'Failed to add sermon to AI',
         description: uploadedFile?.name,
       });
     }

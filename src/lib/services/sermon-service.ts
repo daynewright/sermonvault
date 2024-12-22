@@ -5,6 +5,22 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { extractSermonMetadata } from '@/lib/utils/sermon-parser';
 import { getOpenAIClient } from '@/lib/clients/openai';
 
+async function isSermonContent(text: string): Promise<boolean> {
+  const openai = getOpenAIClient();
+  
+  const response = await openai.completions.create({
+    model: "gpt-3.5-turbo-instruct",
+    prompt: `
+      You are a detector that determines if text is from a sermon or religious teaching. Look for indicators like biblical references, spiritual language, preaching style, or theological concepts. Respond with only 'true' or 'false'.
+      Analyze this text and determine if it's from a sermon. Consider the style, content, and religious context:"${text.slice(0, 500)}"
+      Answer:`,
+      max_tokens: 1,
+      temperature: 0
+  });
+
+  return response.choices[0].text.trim().toLowerCase() === 'true';
+}
+
 export async function processSermonUpload(
   supabase: SupabaseClient,
   file: File,
@@ -17,8 +33,20 @@ export async function processSermonUpload(
   const fileName = `${userId}/${sermonId}/${file.name.replace(/\s+/g, '_')}`;
 
   try {
-    // 1. Upload file to storage
-    const { data: uploadData, error: uploadError } = await supabase
+    //1. Process PDF content
+    const loader = new PDFLoader(file);
+    const docs = await loader.load();
+    const fullText = docs.map(doc => doc.pageContent).join(' ');
+    
+    //2. Validate that the content is a sermon
+    const isSermon = await isSermonContent(fullText);
+
+    if (!isSermon) {
+      throw new Error('This document does not appear to be a sermon');
+    }
+
+    // 3. Upload file to storage
+    const { error: uploadError } = await supabase
       .storage
       .from('sermons')
       .upload(fileName, file, {
@@ -31,13 +59,8 @@ export async function processSermonUpload(
       throw new Error(`Failed to upload file: ${uploadError.message}`);
     }
 
-    // 2. Process PDF content
-    const loader = new PDFLoader(file);
-    const docs = await loader.load();
     
-    const fullText = docs.map(doc => doc.pageContent).join(' ');
-    
-    // 3. Extract metadata using AI
+    // 4. Extract metadata using AI
     const extractedMetadata = await extractSermonMetadata(fullText);
     
     // Format the date properly

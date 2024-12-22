@@ -1,6 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/clients/supabase';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 export async function DELETE(
   request: Request,
