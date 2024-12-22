@@ -38,12 +38,10 @@ import { Input } from '@/components/ui/input';
 type Sermon = {
   id: string;
   pageCount: number;
-  metadata: {
-    title: string;
-    preacher: string;
-    date: string;
-    location: string;
-  };
+  title: string;
+  preacher: string;
+  date: string;
+  location: string;
   filePath: string;
   uploadedAt: string;
 };
@@ -123,12 +121,8 @@ export function SermonSidebar() {
 
     return sermons.filter(
       (sermon) =>
-        sermon.metadata.title
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        sermon.metadata.preacher
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
+        sermon.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sermon.preacher.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [sermons, searchQuery]);
 
@@ -207,7 +201,7 @@ export function SermonSidebar() {
                       {!isCollapsed && (
                         <>
                           <div className="text-sm truncate flex-1">
-                            {sermon.metadata.title}
+                            {sermon.title}
                           </div>
                           <Button
                             variant="ghost"
@@ -238,32 +232,33 @@ export function SermonSidebar() {
                     <div className="space-y-4">
                       <div className="border-b pb-2">
                         <h4 className="text-xs font-semibold leading-none mb-1">
-                          {sermon.metadata.title}
+                          {sermon.title}
                         </h4>
                         <p className="text-xs text-muted-foreground">
-                          by {sermon.metadata.preacher}
+                          by {sermon.preacher}
                         </p>
                       </div>
 
                       <div className="space-y-1">
-                        {sermon.metadata.date && (
+                        {sermon.date && (
                           <div className="flex items-center gap-2 text-xs">
                             <CalendarIcon className="h-3 w-3 text-muted-foreground" />
                             <span>
-                              {new Date(
-                                sermon.metadata.date
-                              ).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })}
+                              {new Date(sermon.date).toLocaleDateString(
+                                undefined,
+                                {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                }
+                              )}
                             </span>
                           </div>
                         )}
-                        {sermon.metadata.location && (
+                        {sermon.location && (
                           <div className="flex items-center gap-2 text-xs">
                             <MapPinIcon className="h-3 w-3 text-muted-foreground" />
-                            <span>{sermon.metadata.location}</span>
+                            <span>{sermon.location}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-2 text-xs">
@@ -321,7 +316,7 @@ export function SermonSidebar() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete &quot;
-              {sermonToDelete?.metadata.title}
+              {sermonToDelete?.title}
               &quot; and it will no longer be searchable with AI.
             </AlertDialogDescription>
           </AlertDialogHeader>

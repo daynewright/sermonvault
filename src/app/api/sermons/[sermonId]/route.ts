@@ -1,18 +1,15 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/clients/supabase';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ sermonId: string }> }
+  { params }: { params: { sermonId: string } }
 ) {
   try {
-    const resolvedParams = await params;
-    const sermonId = resolvedParams.sermonId;
-    
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-    
+    const supabase = createServerSupabaseClient();
+    const sermonId = params.sermonId;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json(
@@ -21,40 +18,60 @@ export async function DELETE(
       );
     }
 
-    // First, get the file path from the documents table
-    const { data: documentData } = await supabase
-      .from('documents')
+    // 1. Get the sermon details first
+    const { data: sermon, error: sermonError } = await supabase
+      .from('sermons')
       .select('file_path')
-      .eq('sermon_id', sermonId)
+      .eq('id', sermonId)
       .eq('user_id', user.id)
-      .limit(1)
       .single();
 
-    if (documentData?.file_path) {
-      // Delete the file from storage
+    if (sermonError) {
+      console.error('Error fetching sermon:', sermonError);
+      throw sermonError;
+    }
+
+    if (!sermon) {
+      return NextResponse.json(
+        { error: 'Sermon not found' },
+        { status: 404 }
+      );
+    }
+
+    // 2. Delete the file from storage
+    if (sermon.file_path) {
       const { error: storageError } = await supabase
         .storage
         .from('sermons')
-        .remove([documentData.file_path]);
+        .remove([sermon.file_path]);
 
       if (storageError) {
         console.error('Error deleting file from storage:', storageError);
-        // Continue with document deletion even if storage deletion fails
+        // Continue with deletion even if storage fails
       }
     }
 
-    // Delete all document chunks for this sermon
-    const { error: dbError } = await supabase
-      .from('documents')
+    // 3. Delete all chunks for this sermon
+    const { error: chunksError } = await supabase
+      .from('sermon_chunks')
       .delete()
-      .match({ 
-        sermon_id: sermonId,
-        user_id: user.id 
-      });
+      .eq('sermon_id', sermonId);
 
-    if (dbError) {
-      console.error('Error deleting sermon:', dbError);
-      throw dbError;
+    if (chunksError) {
+      console.error('Error deleting sermon chunks:', chunksError);
+      throw chunksError;
+    }
+
+    // 4. Delete the sermon record
+    const { error: deleteError } = await supabase
+      .from('sermons')
+      .delete()
+      .eq('id', sermonId)
+      .eq('user_id', user.id);
+
+    if (deleteError) {
+      console.error('Error deleting sermon:', deleteError);
+      throw deleteError;
     }
 
     return NextResponse.json({ success: true });

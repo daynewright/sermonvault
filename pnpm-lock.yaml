@@ -53,6 +53,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.47.10
         version: 2.47.10
+      bible-passage-reference-parser:
+        specifier: ^2.0.1
+        version: 2.0.1
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1634,6 +1637,9 @@ packages:
 
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
+
+  bible-passage-reference-parser@2.0.1:
+    resolution: {integrity: sha512-A/W1ElN+BQP4Xww/2tpuFx3lGGz6nPQz/rdqNL9pbN2Pk0f5rqOj2/VKRO8DgPcH7NrnawZeajJBCakPL/QXWQ==}
 
   bignumber.js@9.1.2:
     resolution: {integrity: sha512-2/mKyZH9K85bzOEfhXDBFZTGd1CTs+5IHpeFQo9luiBG7hghdC851Pj2WAhb6E3R6b9tZj/XKhbg4fum+Kepug==}
@@ -5057,6 +5063,8 @@ snapshots:
     optional: true
 
   base64-js@1.5.1: {}
+
+  bible-passage-reference-parser@2.0.1: {}
 
   bignumber.js@9.1.2:
     optional: true

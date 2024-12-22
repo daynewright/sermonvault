@@ -73,7 +73,7 @@ export function UploadSermonDialog({
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant={buttonVariant} size="sm" className="mr-4">
+        <Button variant={buttonVariant} size="sm">
           <FilePlus className="w-4 h-4 mr-2" />
           Upload a sermon
         </Button>
