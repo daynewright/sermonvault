@@ -60,7 +60,7 @@ function detectTone(text: string): string {
 
   const maxCount = Math.max(...Object.values(wordCounts));
   const dominantTones = Object.entries(wordCounts)
-    .filter(([_, count]) => count === maxCount)
+    .filter(([, count]) => count === maxCount)
     .map(([tone]) => tone);
 
   return dominantTones.length > 1 
@@ -145,7 +145,7 @@ export async function extractSermonMetadata(text: string) {
 
   // Build metadata hints
   const hints = Object.entries(patterns)
-    .filter(([_, value]) => value)
+    .filter(([, value]) => value)
     .map(([key, value]) => `Potential ${key}: ${value}`)
     .join('\n');
 
@@ -160,7 +160,7 @@ export async function extractSermonMetadata(text: string) {
   };
 
   const sermonTypeHint = Object.entries(sermonTypeHints)
-    .filter(([_, isPresent]) => isPresent)
+    .filter(([, isPresent]) => isPresent)
     .map(([type]) => `Possible ${type} sermon`)
     .join('\n');
 

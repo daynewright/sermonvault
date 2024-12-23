@@ -142,7 +142,7 @@ export async function POST(req: Request) {
         .in('id', sermonIds);
 
       // Format context for regular chat
-      let context = documents
+      const context = documents
         ?.sort((a: any, b: any) => b.similarity - a.similarity)
         ?.map((doc: any) => {
           const sermon = sermons?.find(s => s.id === doc.sermon_id);
@@ -230,7 +230,7 @@ Content: ${doc.content}]`;
 
 async function analyzeInBatches(documents: any[], matchingSermons: any[], question: string) {
   const BATCH_SIZE = 5;
-  let finalSummary = [];
+  const finalSummary = [];
   const openai = getOpenAIClient();
   
   // Process documents in batches
