@@ -1,28 +1,42 @@
-import { OpenAI } from 'openai';
-import { ChatOpenAI } from '@langchain/openai';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { ChatOpenAI } from '@langchain/openai';
+import { createServerSupabaseClient } from '@/app/api/lib/clients/supabase';
+import { getOpenAIClient } from '@/app/api/lib/clients/openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Helper function to create standardized streaming response
+const createStreamingResponse = async (stream: any) => {
+  const readableStream = new ReadableStream({
+    async start(controller) {
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        controller.enqueue(content);
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(readableStream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
+};
 
 export async function POST(req: Request) {
+  const openai = getOpenAIClient();
+  const supabase = createServerSupabaseClient();
+  
   try {
     const { message, messages } = await req.json();
     
     // Limit conversation history
     const limitedMessages = messages
-      .slice(-5) // Keep only last 5 messages
-      .filter((msg: any) => {
-        // Optionally filter out messages that are too long
-        return msg.content.length <= 500;
-      });
+      .slice(-5)
+      .filter((msg: any) => msg.content.length <= 500);
 
     // Get current user
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -35,78 +49,137 @@ export async function POST(req: Request) {
     // Initialize the classifier model
     const classifier = new ChatOpenAI({ 
       modelName: 'gpt-3.5-turbo',
-      temperature: 0, // Keep it deterministic
+      temperature: 0,
     });
 
-    // Check if context is needed
-    const classifierResponse = await classifier.invoke([
-      {
-        role: 'system',
-        content: `Determine if this question requires specific sermon context to answer accurately.
-        Respond with only "true" or "false".
-        Examples:
-        - "What does the Bible say about love?" -> false (general question)
-        - "What was the main point of last week's sermon?" -> true (needs context)
-        - "Can you explain John 3:16?" -> false (general biblical question)
-        - "What did the pastor say about forgiveness?" -> true (needs context)`
-      },
-      {
-        role: 'user',
-        content: message
-      }
-    ]);
+    // Check if the question needs sermon context
+    const classifierResponse = await classifier.invoke(
+      `Determine if this question requires searching through sermon content or if it's a general question.
 
-    const contextNeeded = String(classifierResponse.content || '').toLowerCase().includes('true');
+      Questions that NEED_CONTEXT:
+      - "What did Pastor John say about marriage last month?"
+      - "Which sermon talked about the prodigal son?"
+      - "When was the last time you covered Revelation?"
+      - "What are the key points from recent sermons about prayer?"
+      - "How many times have you preached on forgiveness?"
 
-    console.log('Context needed:', contextNeeded);
+      Questions that DON'T need context (NO_CONTEXT):
+      - "What does the Bible say about marriage?"
+      - "Can you explain the story of the prodigal son?"
+      - "How should I pray?"
+      - "What is the meaning of forgiveness in Christianity?"
+      - "What are the basic principles of faith?"
 
-    // Initialize the main chat model
-    const chat = new ChatOpenAI({
-      modelName: 'gpt-4-turbo-preview',
-    });
+      Rules:
+      1. If the question references specific sermons, pastors, or past teachings → NEEDS_CONTEXT
+      2. If the question asks about frequency, patterns, or history → NEEDS_CONTEXT
+      3. If the question is about general biblical or theological topics → NO_CONTEXT
+      4. If in doubt, prefer NEEDS_CONTEXT for better accuracy
 
-    if (!contextNeeded) {
-      const stream = await chat.stream([
-        { 
-          role: 'system', 
-          content: 'You are a helpful sermon assistant knowledgeable about theology and the Bible. Respond in a way that is helpful to the user, cheerful and friendly. Refer to yourself as a sermon assistant.' 
-        },
-        ...limitedMessages,
-        { role: 'user', content: message }
-      ]);
+      Question: "${message}"
+      
+      Reply with only "NEEDS_CONTEXT" or "NO_CONTEXT".`
+    );
 
-      // Create a readable stream that converts AIMessageChunks to strings
-      const readableStream = new ReadableStream({
-        async start(controller) {
-          for await (const chunk of stream) {
-            controller.enqueue(chunk.content);
-          }
-          controller.close();
-        },
+    const needsContext = classifierResponse.content === "NEEDS_CONTEXT";
+
+    // 1. No Context Required
+    if (!needsContext) {
+      const stream = await openai.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful pastoral assistant. 
+            Answer general questions about ministry, theology, and church leadership without referencing specific sermons.
+            
+            Be direct and helpful in your responses.
+            Do not start with "Hello" or "How can I assist you?"
+            Instead, answer the question directly while maintaining a warm, cheerful, and professional tone.`
+          },
+          ...limitedMessages,
+          { role: "user", content: message }
+        ],
+        model: "gpt-3.5-turbo",
+        temperature: 0.7,
+        stream: true,
       });
 
-      return new Response(readableStream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
+      return createStreamingResponse(stream);
     }
 
-    // Generate embedding for the user's question
+    // Check if this is an analytical query
+    const isAnalyticalQuery = message.toLowerCase().match(/how (many|often)|frequency|pattern|when.*last.*|history/);
+
+    // 2. Regular Chat with Context
+    if (!isAnalyticalQuery) {
+      // Generate embedding for regular chat
+      const { data: embedding } = await openai.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: message,
+      });
+
+      // Regular search with normal threshold
+      const { data: documents, error: searchError } = await supabase.rpc(
+        'match_documents',
+        {
+          query_embedding: embedding[0].embedding,
+          match_threshold: 0.3,
+          match_count: 5,
+          p_user_id: user.id
+        }
+      );
+
+      if (searchError) {
+        console.error('Search error:', searchError);
+        throw searchError;
+      }
+
+      // Get sermon metadata for context
+      const sermonIds = [...new Set(documents?.map((doc: any) => doc.sermon_id))];
+      const { data: sermons } = await supabase
+        .from('sermons')
+        .select('*')
+        .in('id', sermonIds);
+
+      // Format context for regular chat
+      let context = documents
+        ?.sort((a: any, b: any) => b.similarity - a.similarity)
+        ?.map((doc: any) => {
+          const sermon = sermons?.find(s => s.id === doc.sermon_id);
+          return `[Sermon: "${sermon?.title}" (${sermon?.date}) Content: ${doc.content}]`;
+        })
+        .join('\n\n');
+
+      const stream = await openai.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful sermon assistant. Use the following sermon content to answer questions: ${context}`
+          },
+          ...limitedMessages,
+          { role: "user", content: message }
+        ],
+        model: "gpt-3.5-turbo",
+        temperature: 0.7,
+        stream: true,
+      });
+
+      return createStreamingResponse(stream);
+    }
+
+    // 3. Analytical Queries
     const { data: embedding } = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: message,
     });
 
-    // Search with slightly higher threshold and fewer results
+    // Get potentially relevant documents with higher recall
     const { data: documents, error: searchError } = await supabase.rpc(
       'match_documents',
       {
         query_embedding: embedding[0].embedding,
-        match_threshold: 0.3,  // Increased from 0.1
-        match_count: 5,        // Reduced from 10
+        match_threshold: 0.2,
+        match_count: 30,
         p_user_id: user.id
       }
     );
@@ -116,82 +189,133 @@ export async function POST(req: Request) {
       throw searchError;
     }
 
-    console.log('Found documents:', documents?.length || 0);
+    // Get unique sermon IDs and fetch sermon metadata
+    const sermonIds = [...new Set(documents?.map((doc: any) => doc.sermon_id))];
+    const { data: matchingSermons, error: sermonsError } = await supabase
+      .from('sermons')
+      .select('*')
+      .in('id', sermonIds);
 
-    // Sort documents by similarity and format context with limits
-    let context = documents
-      ?.sort((a: any, b: any) => b.similarity - a.similarity)
-      ?.slice(0, 3)  // Take only top 3 most relevant
-      ?.map((doc: any) => `[Similarity: ${doc.similarity.toFixed(2)}]\n${doc.content}`)
-      .join('\n\n---\n\n');
-
-    // Limit context length if too long
-    if (context?.length > 4000) {
-      context = context.slice(0, 4000) + '...';
+    if (sermonsError) {
+      console.error('Sermons fetch error:', sermonsError);
+      throw sermonsError;
     }
 
-    console.log('Context length:', context?.length || 0);
-
-    const systemPrompt = `You are a sermon content assistant whose primary purpose is to search through and reference the user's past sermons. 
-    Your main role is to find and discuss relevant content from their actual uploaded sermons.
-    
-    Here is the relevant sermon content from the user's database:
-    ${context}
-    
-    Core instructions:
-    1. ALWAYS start by referencing specific sermons from the provided context
-    2. If searching for topics (e.g. "sermons about grace"), scan the context and mention ALL relevant sermons found
-    3. Only after exhausting the actual sermon content, you may provide additional theological insights
-    4. Format your responses with:
-       - Sermon title and date in **bold**
-       - Key quotes or points from the sermons in markdown
-       - Clear separation between different sermons discussed
-    5. If the context doesn't contain relevant sermons, explicitly state this before providing general guidance
-    6. Never make up sermon content - only reference what's in the context unless explicitly asked for additional insights`;
-
-    const completion = await openai.chat.completions.create({
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...limitedMessages,
-        { role: "user", content: message }
-      ],
-      model: "gpt-3.5-turbo",
-      temperature: 0.7,
-      stream: true,
-    });
-
-    // Stream the response
-    const stream = new ReadableStream({
-      async start(controller) {
-        for await (const part of completion) {
-          const text = part.choices[0]?.delta?.content || '';
-          controller.enqueue(text);
-        }
-        controller.close();
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain',
-        'Cache-Control': 'no-cache',
-      },
-    });
+    // Process in batches and get final analysis
+    const analysis = await analyzeInBatches(documents, matchingSermons, message);
+    return createStreamingResponse(analysis);
 
   } catch (error: any) {
-    // Check for billing/quota errors
-    if (error?.status === 429 || error?.error?.code === 'insufficient_quota') {
-      return NextResponse.json(
-        { error: 'AI service is temporarily unavailable. Please try again later.' },
-        { status: 429 }
-      );
-    }
-    
-    // Other errors
-    console.error('Chat error:', error);
+    console.error('Analysis error:', error);
     return NextResponse.json(
-      { error: 'Failed to process chat message' },
+      { error: 'Failed to process request' },
       { status: 500 }
     );
   }
+}
+
+// Helper functions for batch processing
+function formatBatchContext(documents: any[], sermons: any[]) {
+  return documents
+    .map(doc => {
+      const sermon = sermons.find(s => s.id === doc.sermon_id);
+      return `[Sermon: "${sermon?.title}" (${sermon?.date})
+Scripture: ${sermon?.key_scriptures || 'Not specified'}
+Summary: ${sermon?.summary || 'Not available'}
+Similarity: ${doc.similarity.toFixed(2)}
+Content: ${doc.content}]`;
+    })
+    .join('\n\n---\n\n');
+}
+
+async function analyzeInBatches(documents: any[], matchingSermons: any[], question: string) {
+  const BATCH_SIZE = 5;
+  let finalSummary = [];
+  const openai = getOpenAIClient();
+  
+  // Process documents in batches
+  for (let i = 0; i < documents.length; i += BATCH_SIZE) {
+    const batchDocs = documents.slice(i, i + BATCH_SIZE);
+    const batchContext = formatBatchContext(batchDocs, matchingSermons);
+    
+    const batchResponse = await openai.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: `You are analyzing sermon content and metadata to find specific patterns and information.
+          
+          Available metadata for each sermon:
+          - Title
+          - Date
+          - Key Scriptures
+          - Summary
+          - Full Content
+          
+          For any type of query, focus on:
+          1. Exact matches (scriptures, words, phrases)
+          2. Related concepts and themes
+          3. Context of how the topic appears
+          4. Relevance to the query (high, medium, low)
+          
+          Output in JSON format with structure: {
+            "matches": [{
+              "date": "",
+              "title": "",
+              "key_scriptures": [],
+              "relevance": "high|medium|low",
+              "match_type": "primary|secondary|mentioned",
+              "context": "",
+              "supporting_quotes": []
+            }],
+            "count": 0,
+            "metadata_summary": {
+              "date_range": "",
+              "common_themes": [],
+              "related_topics": []
+            }
+          }`
+        },
+        { role: "user", content: `Analyze these sermons regarding: ${question}\n\nContent: ${batchContext}` }
+      ],
+      model: "gpt-3.5-turbo",
+      response_format: { type: "json_object" },
+      temperature: 0
+    });
+
+    const batchResults = JSON.parse(batchResponse.choices[0].message.content || '{}');
+    finalSummary.push(batchResults);
+  }
+
+  // Final conversational summary
+  return await openai.chat.completions.create({
+    messages: [
+      {
+        role: "system",
+        content: `You are a friendly sermon assistant helping a pastor understand patterns in their preaching.
+        
+        Core instructions:
+        1. Be conversational and warm in tone
+        2. Reference specific sermons and dates naturally
+        3. Keep responses clear and organized
+        4. Bold important references
+        5. Use spacing for readability
+        
+        Structure your response:
+        1. Direct answer to their question first
+        2. Supporting details and examples
+        3. Any interesting patterns you noticed
+        4. Brief conclusion or suggestion if relevant
+        
+        Remember to:
+        - Use natural transitions
+        - Keep technical details simple
+        - Be encouraging and helpful
+        - Stay focused on their specific question`
+      },
+      { role: "user", content: `Have a friendly conversation about these sermon analysis findings: ${JSON.stringify(finalSummary)}` }
+    ],
+    model: "gpt-3.5-turbo",
+    temperature: 0.7,
+    stream: true,
+  });
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FilePlus } from 'lucide-react';
 import { Button, ButtonProps } from '@/components/ui/button';
 import {
@@ -12,6 +12,22 @@ import { InputFile } from '@/components/file-upload';
 import { useToast } from '@/hooks/use-toast';
 import { useSermonsStore } from '@/store/use-sermons-store';
 
+const processingPhrases = [
+  'AI is reading your sermon...',
+  'Analyzing the content...',
+  'Extracting key points...',
+  'Processing scripture references...',
+  'Determining the tone...',
+  'Extracting themes...',
+  'Extracting calls to action...',
+  'Extracting personal stories...',
+  'Extracting mentioned people...',
+  'Extracting mentioned events...',
+  'Extracting engagement tags...',
+  'Extracting keywords...',
+  'Almost done...',
+];
+
 export function UploadSermonDialog({
   buttonVariant,
 }: {
@@ -21,8 +37,21 @@ export function UploadSermonDialog({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [phraseIndex, setPhraseIndex] = useState(0);
 
   const refreshSermons = useSermonsStore((state) => state.refreshSermons);
+
+  useEffect(() => {
+    if (!isUploading) return;
+
+    const interval = setInterval(() => {
+      setPhraseIndex((current) =>
+        current < processingPhrases.length - 1 ? current + 1 : current
+      );
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isUploading]);
 
   const handleFileSelect = (file: File) => {
     setUploadedFile(file);
@@ -30,7 +59,7 @@ export function UploadSermonDialog({
 
   const handleUpload = async () => {
     if (!uploadedFile) return;
-
+    setPhraseIndex(0);
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', uploadedFile);
@@ -94,7 +123,7 @@ export function UploadSermonDialog({
         {isUploading ? (
           <div className="flex-1 overflow-y-auto">
             <p className="text-center">
-              {'AI is reading your sermon...'.split('').map((letter, index) => (
+              {processingPhrases[phraseIndex].split('').map((letter, index) => (
                 <span
                   key={index}
                   className="inline-block animate-pulse"

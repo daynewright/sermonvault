@@ -89,6 +89,15 @@ export async function processSermonUpload(
       illustrations: extractedMetadata.illustrations || [],
       preacher: extractedMetadata.preacher || userName,
       location: extractedMetadata.location || 'Unknown Location',
+      themes: extractedMetadata.themes || [],
+      calls_to_action: extractedMetadata.calls_to_action || [],
+      personal_stories: extractedMetadata.personal_stories || [],
+      tone: extractedMetadata.tone || 'Unknown Tone',
+      mentioned_people: extractedMetadata.mentioned_people || [],
+      mentioned_events: extractedMetadata.mentioned_events || [],
+      engagement_tags: extractedMetadata.engagement_tags || [],
+      word_count: extractedMetadata.word_count || 0,
+      keywords: extractedMetadata.keywords || [],
     };
 
     // 4. Create sermon record with confidence scores

@@ -7,38 +7,55 @@ DROP TABLE IF EXISTS sermons;
 -- Enable vector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Create sermon table
+-- Create sermon table with metadata fields
 CREATE TABLE sermons (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    
     -- Core metadata
     title TEXT NOT NULL,
-    date DATE NOT NULL,
+    date DATE,
     series TEXT,
     primary_scripture TEXT,
-    scriptures TEXT[],
+    scriptures TEXT[],  -- Array of scripture references
     sermon_type TEXT CHECK (sermon_type IN ('expository', 'textual', 'topical', 'narrative')),
+    confidence_scores JSONB,  -- Confidence scores for metadata extraction
     
     -- Content classification
-    topics TEXT[],
-    tags TEXT[],
+    topics TEXT[],  -- Array of topics covered
+    tags TEXT[],    -- Array of tags
     
     -- Rich content
-    summary TEXT,
-    key_points TEXT[],
-    illustrations TEXT[],
+    summary TEXT,   -- Brief summary of the sermon
+    key_points TEXT[],  -- Key points or outline
+    illustrations TEXT[],  -- Array of illustrations used
     
     -- File info
-    file_path TEXT,
-    file_type TEXT,
-    file_name TEXT,
-    file_size INTEGER,
-    page_count INTEGER,
+    file_path TEXT,  -- Path to the sermon file
+    file_type TEXT,  -- Type of the sermon file (e.g., PDF, Word)
+    file_name TEXT,  -- Name of the file
+    file_size INTEGER,  -- Size of the file in bytes
+    file_pages INTEGER,  -- Number of pages in the file (if applicable)
     
-    -- Metadata
-    preacher TEXT NOT NULL,
-    location TEXT,
+    -- New metadata fields
+    themes TEXT[],  -- Array of sermon themes
+    calls_to_action TEXT[],  -- Array of calls to action
+    personal_stories TEXT[],  -- Array of personal stories or anecdotes
+    tone TEXT,  -- Emotional tone of the sermon (e.g., hopeful, reflective)
+    mentioned_people TEXT[],  -- Array of people mentioned
+    mentioned_events TEXT[],  -- Array of events referenced
+    engagement_tags TEXT[],  -- Array of audience engagement prompts
+    word_count INTEGER,  -- Total word count of the sermon
+    keywords TEXT[],  -- Array of frequently used keywords
+    
+    -- Preacher and location metadata
+    preacher TEXT,  
+    location TEXT, 
+    
+    -- Auditing timestamps
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- User association (if applicable)
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
 );
 

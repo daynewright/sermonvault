@@ -1,12 +1,10 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { processSermonUpload } from '@/app/api/lib/services/sermon-service';
+import { createServerSupabaseClient } from '@/app/api/lib/clients/supabase';
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = createServerSupabaseClient();
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
