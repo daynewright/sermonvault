@@ -361,7 +361,6 @@ export const UploadSermonConfirmationForm = ({
             <div className="space-y-4 rounded-lg border p-4">
               <h3 className="font-medium text-lg border-b pb-2">Engagement</h3>
               {renderField('Calls to Action', 'calls_to_action', 'array')}
-              {renderField('Engagement Tags', 'engagement_tags', 'array')}
               {renderField('Tone', 'tone')}
             </div>
 
