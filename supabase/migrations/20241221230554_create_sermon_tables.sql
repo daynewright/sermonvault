@@ -1,8 +1,9 @@
 -- Reset everything first
 DROP FUNCTION IF EXISTS match_documents;
 DROP FUNCTION IF EXISTS get_topic_overview;
-DROP TABLE IF EXISTS sermon_chunks;
-DROP TABLE IF EXISTS sermons;
+DROP TABLE IF EXISTS sermon_chunks cascade;
+DROP TABLE IF EXISTS sermon_processing cascade;
+DROP TABLE IF EXISTS sermons cascade;
 
 -- Enable vector extension
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -43,7 +44,6 @@ CREATE TABLE sermons (
     tone TEXT,  -- Emotional tone of the sermon (e.g., hopeful, reflective)
     mentioned_people TEXT[],  -- Array of people mentioned
     mentioned_events TEXT[],  -- Array of events referenced
-    engagement_tags TEXT[],  -- Array of audience engagement prompts
     word_count INTEGER,  -- Total word count of the sermon
     keywords TEXT[],  -- Array of frequently used keywords
     
@@ -51,15 +51,18 @@ CREATE TABLE sermons (
     preacher TEXT,  
     location TEXT, 
     
+    -- Processing reference
+    processing_id UUID,  -- Reference to the processing record
+    
     -- Auditing timestamps
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     
-    -- User association (if applicable)
+    -- User association
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
--- Create chunks table for embeddings
+-- Create chunks table for embeddings with CASCADE DELETE
 CREATE TABLE sermon_chunks (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     sermon_id UUID REFERENCES sermons(id) ON DELETE CASCADE,
@@ -69,6 +72,132 @@ CREATE TABLE sermon_chunks (
     chunk_index INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Create processing table with CASCADE DELETE
+CREATE TABLE sermon_processing (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    status TEXT CHECK (status IN ('uploaded', 'parsed', 'vectorized', 'completed', 'error')),
+    sermon_id UUID REFERENCES sermons(id) ON DELETE CASCADE,
+    
+    -- File information
+    file_name TEXT,
+    file_size BIGINT,
+    file_type TEXT,
+    file_path TEXT,
+    
+    -- Content
+    text TEXT,                    -- Extracted text from PDF
+    error_message TEXT,           -- Store any error messages
+    
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+
+-- Add RLS policies
+ALTER TABLE sermon_processing ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sermons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sermon_chunks ENABLE ROW LEVEL SECURITY;
+
+-- Drop all existing policies
+DROP POLICY IF EXISTS "Users can insert their own processing records" ON sermon_processing;
+DROP POLICY IF EXISTS "Users can view their own processing records" ON sermon_processing;
+DROP POLICY IF EXISTS "Users can update their own processing records" ON sermon_processing;
+
+DROP POLICY IF EXISTS "Users can insert their own sermons" ON sermons;
+DROP POLICY IF EXISTS "Users can view their own sermons" ON sermons;
+DROP POLICY IF EXISTS "Users can update their own sermons" ON sermons;
+DROP POLICY IF EXISTS "Users can delete their own sermons" ON sermons;
+
+DROP POLICY IF EXISTS "Users can insert their own sermon chunks" ON sermon_chunks;
+DROP POLICY IF EXISTS "Users can view their own sermon chunks" ON sermon_chunks;
+
+DROP POLICY IF EXISTS "Authenticated users can upload sermons" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view their own sermons" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own sermons" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own sermons" ON storage.objects;
+
+-- Recreate all policies
+-- Processing table policies
+CREATE POLICY "Users can insert their own processing records"
+    ON sermon_processing FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own processing records"
+    ON sermon_processing FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own processing records"
+    ON sermon_processing FOR UPDATE
+    USING (auth.uid() = user_id);
+
+-- Sermons table policies
+CREATE POLICY "Users can insert their own sermons"
+    ON sermons FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own sermons"
+    ON sermons FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own sermons"
+    ON sermons FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own sermons"
+    ON sermons FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Sermon chunks policies
+CREATE POLICY "Users can insert their own sermon chunks"
+    ON sermon_chunks FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM sermons
+            WHERE id = sermon_chunks.sermon_id
+            AND user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can view their own sermon chunks"
+    ON sermon_chunks FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM sermons
+            WHERE id = sermon_chunks.sermon_id
+            AND user_id = auth.uid()
+        )
+    );
+
+-- Storage policies
+-- Create indexes
+CREATE INDEX idx_sermon_processing_user_id ON sermon_processing(user_id);
+CREATE INDEX idx_sermon_processing_status ON sermon_processing(status);
+CREATE INDEX idx_sermons_user_id ON sermons(user_id);
+CREATE INDEX idx_sermons_topics ON sermons USING GIN(topics);
+CREATE INDEX idx_sermons_tags ON sermons USING GIN(tags);
+CREATE INDEX idx_sermon_chunks_sermon_id ON sermon_chunks(sermon_id);
+CREATE INDEX idx_sermon_chunks_embedding ON sermon_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Add function to automatically update updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_sermon_processing_updated_at
+    BEFORE UPDATE ON sermon_processing
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_sermons_updated_at
+    BEFORE UPDATE ON sermons
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to match documents using embeddings
 CREATE OR REPLACE FUNCTION match_documents(
@@ -109,43 +238,31 @@ BEGIN
 END;
 $$;
 
--- Create indexes
-CREATE INDEX idx_sermons_user_id ON sermons(user_id);
-CREATE INDEX idx_sermons_topics ON sermons USING GIN(topics);
-CREATE INDEX idx_sermons_tags ON sermons USING GIN(tags);
-CREATE INDEX idx_sermon_chunks_sermon_id ON sermon_chunks(sermon_id);
-CREATE INDEX idx_sermon_chunks_embedding ON sermon_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-
 -- Create storage bucket and policies
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('sermons', 'sermons', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Set up storage policies
-CREATE POLICY "Authenticated users can upload sermons" ON storage.objects
-    FOR INSERT TO authenticated
-    WITH CHECK (
-        bucket_id = 'sermons' AND 
-        (storage.foldername(name))[1] = auth.uid()::text
-    );
+-- Drop existing storage policies
+DROP POLICY IF EXISTS "Allow authenticated uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated reads" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated deletes" ON storage.objects;
 
-CREATE POLICY "Users can view their own sermons" ON storage.objects
-    FOR SELECT TO authenticated
-    USING (
-        bucket_id = 'sermons' AND 
-        (storage.foldername(name))[1] = auth.uid()::text
-    );
+-- Create simpler storage policies
+CREATE POLICY "Allow authenticated uploads"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'sermons');
 
-CREATE POLICY "Users can update their own sermons" ON storage.objects
-    FOR UPDATE TO authenticated
-    USING (
-        bucket_id = 'sermons' AND 
-        (storage.foldername(name))[1] = auth.uid()::text
-    );
+CREATE POLICY "Allow authenticated reads"
+ON storage.objects
+FOR SELECT
+TO authenticated
+USING (bucket_id = 'sermons');
 
-CREATE POLICY "Users can delete their own sermons" ON storage.objects
-    FOR DELETE TO authenticated
-    USING (
-        bucket_id = 'sermons' AND 
-        (storage.foldername(name))[1] = auth.uid()::text
-    );
+CREATE POLICY "Allow authenticated deletes"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (bucket_id = 'sermons');

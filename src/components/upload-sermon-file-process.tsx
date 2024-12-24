@@ -1,24 +1,19 @@
 import { useEffect, useState } from 'react';
 import { DialogTitle, DialogDescription } from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/button';
-
 import { InputFile } from './file-upload';
 import { useToast } from '@/hooks/use-toast';
 import { SermonData } from '@/types/sermonData';
+
 const processingPhrases = [
   'AI is reading your sermon...',
   'Analyzing the content...',
   'Extracting key points...',
   'Processing scripture references...',
   'Determining the tone...',
-  'Extracting themes...',
-  'Extracting calls to action...',
-  'Extracting personal stories...',
-  'Extracting mentioned people...',
-  'Extracting mentioned events...',
-  'Extracting engagement tags...',
-  'Extracting keywords...',
-  'Almost done...',
+  'Creating AI understanding...',
+  'Organizing content...',
+  'Finalizing upload...',
 ];
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
@@ -47,6 +42,60 @@ export const UploadSermonFileProcess = ({
     return () => clearInterval(interval);
   }, [isUploading]);
 
+  const processSermon = async (processingId: string, file: File) => {
+    try {
+      // Step 2: Parse metadata
+      const parseResponse = await fetch(
+        `/api/process-sermon/${processingId}/parse`,
+        {
+          method: 'POST',
+        }
+      );
+
+      if (!parseResponse.ok) {
+        const error = await parseResponse.json();
+        throw new Error(error.error || 'Parsing failed');
+      }
+
+      const { sermonId } = await parseResponse.json();
+
+      // Step 3: Create vectors
+      const vectorizeResponse = await fetch(
+        `/api/process-sermon/${processingId}/vectorize`,
+        {
+          method: 'POST',
+        }
+      );
+
+      if (!vectorizeResponse.ok) {
+        const error = await vectorizeResponse.json();
+        throw new Error(error.error || 'Vectorization failed');
+      }
+
+      // Step 4: Final storage
+      const storeFormData = new FormData();
+      storeFormData.append('file', file);
+
+      const storeResponse = await fetch(
+        `/api/process-sermon/${processingId}/store`,
+        {
+          method: 'POST',
+          body: storeFormData,
+        }
+      );
+
+      if (!storeResponse.ok) {
+        const error = await storeResponse.json();
+        throw new Error(error.error || 'Storage failed');
+      }
+
+      return sermonId;
+    } catch (error) {
+      console.error('Processing error:', error);
+      throw error;
+    }
+  };
+
   const handleFileSelect = (file: File) => {
     setUploadedFile(file);
   };
@@ -54,7 +103,6 @@ export const UploadSermonFileProcess = ({
   const handleUpload = async () => {
     if (!uploadedFile) return;
 
-    // First check file size
     if (uploadedFile.size > MAX_FILE_SIZE) {
       toast({
         variant: 'destructive',
@@ -74,36 +122,43 @@ export const UploadSermonFileProcess = ({
     formData.append('file', uploadedFile);
 
     try {
+      // Step 1: Initial upload
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
-      if (response.ok) {
-        const sermonData = await response.json();
-        setSermonData(sermonData.sermon);
-        toast({
-          title: 'Sermon added to AI successfully!',
-          description: uploadedFile?.name,
-        });
-      } else {
-        setIsUploading(false);
-        setUploadedFile(null);
+      if (!response.ok) {
         const errorData = await response.json();
-        toast({
-          variant: 'destructive',
-          title: errorData.error || 'Failed to add sermon to AI',
-          description: uploadedFile?.name,
-        });
+        throw new Error(errorData.error || 'Upload failed');
       }
+
+      const { processingId } = await response.json();
+
+      // Process through remaining steps
+      const sermonId = await processSermon(processingId, uploadedFile);
+
+      // Get the final sermon data
+      const sermonResponse = await fetch(`/api/sermons/${sermonId}`);
+      if (!sermonResponse.ok) {
+        throw new Error('Failed to fetch sermon data');
+      }
+
+      const sermonData = await sermonResponse.json();
+      setSermonData(sermonData);
+
+      toast({
+        title: 'Sermon added successfully!',
+        description: uploadedFile.name,
+      });
     } catch (error) {
       setIsUploading(false);
       setUploadedFile(null);
       toast({
         variant: 'destructive',
         title:
-          error instanceof Error ? error.message : 'Failed to add sermon to AI',
-        description: uploadedFile?.name,
+          error instanceof Error ? error.message : 'Failed to process sermon',
+        description: uploadedFile.name,
       });
     }
   };
@@ -145,7 +200,7 @@ export const UploadSermonFileProcess = ({
       )}
       {uploadedFile && (
         <Button className="mt-4" onClick={handleUpload} disabled={isUploading}>
-          {isUploading ? 'Uploading...' : 'Upload selected file'}
+          {isUploading ? 'Processing...' : 'Upload selected file'}
         </Button>
       )}
     </>

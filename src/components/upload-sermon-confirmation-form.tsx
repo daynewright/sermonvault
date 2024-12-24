@@ -47,6 +47,8 @@ export const UploadSermonConfirmationForm = ({
 }) => {
   const [formData, setFormData] = useState<SermonData>(initialData);
 
+  console.log('formData', formData);
+
   const getConfidenceIndicator = (confidence: number) => {
     if (confidence > 0.75) {
       return {
