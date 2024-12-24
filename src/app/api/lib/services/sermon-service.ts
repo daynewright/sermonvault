@@ -106,7 +106,7 @@ export async function processSermonUpload(
       .insert({
         id: sermonId,
         ...metadata,
-        confidence_scores: extractedMetadata.confidence || {},  // Store confidence scores
+        confidence_scores: extractedMetadata.confidence_scores || {},  // Store confidence scores
         file_path: fileName,
         file_type: file.type,
         file_name: file.name,
@@ -119,7 +119,7 @@ export async function processSermonUpload(
 
     console.log('Metadata and confidence scores:', { 
       metadata, 
-      confidence: extractedMetadata.confidence 
+      confidence_scores: extractedMetadata.confidence_scores 
     });
 
     if (sermonError) {

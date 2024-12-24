@@ -42,13 +42,12 @@ const toneIndicators: Record<string, ToneIndicator> = {
 };
 
 function detectTone(text: string): string {
+
   const wordCounts: Record<string, number> = {};
-  
   // Initialize counts
   Object.keys(toneIndicators).forEach(tone => {
     wordCounts[tone] = 0;
   });
-
   // Count occurrences of tone-indicating words
   Object.entries(toneIndicators).forEach(([tone, indicator]) => {
     indicator.words.forEach(word => {
@@ -59,6 +58,7 @@ function detectTone(text: string): string {
   });
 
   const maxCount = Math.max(...Object.values(wordCounts));
+
   const dominantTones = Object.entries(wordCounts)
     .filter(([, count]) => count === maxCount)
     .map(([tone]) => tone);
@@ -68,154 +68,145 @@ function detectTone(text: string): string {
     : dominantTones[0];
 }
 
-const SERMON_TAGS = [
-  'salvation',          // Core gospel message and salvation themes
-  'discipleship',       // Following Christ, spiritual growth
-  'faith',             // Trust in God, believing
-  'prayer',            // Prayer, communication with God
-  'relationships',     // Family, marriage, friendships
-  'spiritual-warfare', // Spiritual battles, resistance
-  'evangelism',        // Sharing faith, missions
-  'healing',           // Physical, emotional, spiritual healing
-  'worship',           // Praise, adoration, worship practices
-  'stewardship',       // Money, time, resources management
-  'identity',          // Who we are in Christ
-  'community',         // Church life, fellowship
-  'character',         // Fruit of the Spirit, personal growth
-  'biblical-history',  // Historical context, Bible background
-  'prophecy'           // End times, prophetic messages
-] as const;
-
 export async function extractSermonMetadata(text: string) {
-  // Clean and normalize the text
-  const cleanedText = text
-    // Remove multiple consecutive spaces/newlines
-    .replace(/\s+/g, ' ')
-    // Remove special characters that don't add meaning
-    .replace(/[""]/g, '"')
-    .replace(/['']/g, "'")
-    // Remove any HTML tags if present
-    .replace(/<[^>]*>/g, ' ')
-    // Normalize dashes
-    .replace(/[��‑‒–—―]/g, '-')
-    // Remove non-printable characters
-    .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-    // Replace common abbreviations
-    .replace(/Rev\./gi, 'Reverend')
-    .replace(/Dr\./gi, 'Doctor')
-    .replace(/St\./gi, 'Saint')
-    .replace(/vs\./gi, 'versus')
-    .replace(/etc\./gi, 'etcetera')
-    // Remove common filler words in parentheses
-    .replace(/\([Ll]aughter\)/g, '')
-    .replace(/\([Aa]men\)/g, '')
-    .replace(/\([Pp]ause\)/g, '')
-    .replace(/\([Aa]pplause\)/g, '')
-    // Normalize common Biblical terms
-    .replace(/Jesus Christ/gi, 'Jesus')
-    .replace(/Lord God/gi, 'Lord')
-    .replace(/Holy Spirit/gi, 'Spirit')
-    // Remove repetitive phrases
-    .replace(/([A-Za-z]+)(\s+\1)+/gi, '$1')
-    // Remove timestamps if present
-    .replace(/\b\d{1,2}:\d{2}(:\d{2})?\b/g, '')
-    // Common sermon transitions
-    .replace(/(?:In conclusion|To conclude|Finally|Lastly|In summary)/gi, '')
-    // Common sermon interjections
-    .replace(/(?:You see|You know|Let me tell you|Listen to this)/gi, '')
-    // Standardize Biblical book names
-    .replace(/First/gi, '1')
-    .replace(/Second/gi, '2')
-    .replace(/Third/gi, '3')
-    .trim();
-
-  // Extract potential metadata patterns
-  const patterns = {
-    date: cleanedText.match(/\b\d{4}[-/.]\d{1,2}[-/.]\d{1,2}\b/)?.[0],
-    speaker: cleanedText.match(/(?:Pastor|Reverend|Doctor|Rev\.|Dr\.)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/)?.[1],
-    series: cleanedText.match(/(?:Series|Part|Message)[\s:]+(.*?)(?:\.|$)/i)?.[1],
-    location: cleanedText.match(/(?:at|in|from)\s+([A-Z][a-zA-Z\s]+Church)/)?.[1],
-    partNumber: cleanedText.match(/Part\s+(\d+)/i)?.[1],
-    themes: cleanedText.match(/theme[s]?[\s:]+(.*?)(?:\.|$)/i)?.[1],
-    events: cleanedText.match(/(?:event|historical|history)[\s:]+(.*?)(?:\.|$)/i)?.[1],
-    wordCount: cleanedText.split(/\s+/).length,
-    // Add tone detection based on emotional words
-    tone: detectTone(cleanedText), // Would need to implement this function
+  // Keep regex pre-processing for hints
+  const hints = {
+    date: text.match(/(?:\b\d{4}[-/.]\d{1,2}[-/.]\d{1,2}\b|(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})/i)?.[0]?.replace(/\s+/g, ' '),
+    preacher: text.match(/(?:(?:Pastor|Reverend|Doctor|Rev\.|Dr\.|Minister|Elder|Bishop|Father|Apostle)\s+)([A-Z][a-z]+(?:\s+(?:van |de |von )?[A-Z][a-z]+){1,2})/)?.[1]?.replace(/\s+/g, ' '),
+    location: text.match(/(?:(?:at|in|from)\s+)?(?:(?:the\s+)?([A-Z][a-zA-Z\s']+(?:Church|Temple|Cathedral|Chapel|Sanctuary|Fellowship|Ministries|Assembly|Tabernacle)))/)?.[1]?.replace(/\s+/g, ' '),
+    word_count: text.split(/\s+/).length,
+    tone: detectTone(text),
+    key_points: [
+      ...text.matchAll(/(?:point (?:number )?[#\d]+|first(?:ly)?|second(?:ly)?|third(?:ly)?|finally|main point|key point|principle|lesson)[:\s]+([^.!?]{10,200}[.!?])/gi),
+      ...text.matchAll(/(?:^\s*[\d#]+[\.)]\s*|^\s*[A-Z]\.\s+|•\s+)([^.!?]{10,200}[.!?])/gim),
+      ...text.matchAll(/(?:takeaway|remember this|important truth)[:\s]+([^.!?]{10,200}[.!?])/gi)
+    ].map(match => match[1]?.replace(/\s+/g, ' ').trim()),
+    illustrations: [
+      ...text.matchAll(/(?:let me illustrate|here's an illustration|for example|imagine|picture this|consider this|think about|story of|parable|analogy|like|just as)[:\s]+([^.!?]+(?:[.!?]+[^.!?]+){0,3})/gi)
+    ].map(match => match[1]?.replace(/\s+/g, ' ').trim()),
+    personal_stories: text.match(/(?:I remember|when I was|in my (?:own )?experience|my personal story|happened to me|in my life|years ago[^.!?]*I|I recall|I witnessed|I've seen|I learned|I discovered)[^.!?]*(?:[.!?]+[^.!?]+){0,3}[.!?]/gi)?.map(story => story.replace(/\s+/g, ' ').trim()) || [],
+    engagement_tags: text.match(/(?:raise your (?:hand|hands)|say amen|turn to your neighbor|repeat after me|let's pray|stand with me|bow your heads|open your Bible|write this down|remember this|let's read together|look with me|notice|consider)[^.!?]*[.!?]/gi)?.map(tag => tag.replace(/\s+/g, ' ').trim()) || []
   };
 
-  // Build metadata hints
-  const hints = Object.entries(patterns)
-    .filter(([, value]) => value)
-    .map(([key, value]) => `Potential ${key}: ${value}`)
-    .join('\n');
-
-  // Extract Bible references
-  const foundReferences = findBibleReferences(cleanedText);
-
-  // Look for common sermon types
-  const sermonTypeHints = {
-    expository: /verse[- ]by[- ]verse|chapter[- ]by[- ]chapter/i.test(cleanedText),
-    topical: /topic|theme|subject/i.test(cleanedText),
-    narrative: /story|narrative|account/i.test(cleanedText),
-  };
-
-  const sermonTypeHint = Object.entries(sermonTypeHints)
-    .filter(([, isPresent]) => isPresent)
-    .map(([type]) => `Possible ${type} sermon`)
-    .join('\n');
+  const foundReferences = findBibleReferences(text);
+  const SERMON_TYPES = ['expository', 'textual', 'topical', 'narrative'] as const;
+  const SERMON_TAGS = [
+    'salvation', 'discipleship', 'faith', 'prayer', 'relationships',
+    'spiritual-warfare', 'evangelism', 'healing', 'worship', 'stewardship',
+    'identity', 'community', 'character', 'biblical-history', 'prophecy'
+  ] as const;
 
   const openai = getOpenAIClient();
 
-
-  // Max cost per sermon: 1.27 cents total
-  // - Input: 4.5K tokens = 0.45 cents ($0.0045)
-  // - Output: 4K tokens = 0.82 cents ($0.0082)
+  // Single comprehensive analysis
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo-1106",
     messages: [
       {
         role: "system",
-        content: `Extract sermon metadata. Bible references have been pre-processed: ${foundReferences.join(', ')}
-        ${hints ? '\nPre-processed hints:\n' + hints : ''}
-        ${sermonTypeHint ? '\nSermon type hints:\n' + sermonTypeHint : ''}
-        - title: string
-        - date: YYYY-MM-DD
-        - preacher: string
-        - primary_scripture: string (e.g., "Matthew 21:1-11")
-        - scriptures: array of references ["Matthew 21:1-11", "Zechariah 9:9"]
-        - topics: array [1-3 topics]
-        - summary: string (100-200 words)
-        - series: string
-        - sermon_type: "expository"|"textual"|"topical"|"narrative"
-        - tags: array [1-3 tags] (must be one of the following: ${SERMON_TAGS.join(', ')})
-        - illustrations: array of strings (give details of the illustration)
-        - key_points: array [1-3 key points]
-        - location: string
-        - themes: array [1-3 themes]
-        - calls_to_action: array [1-3 calls to action]
-        - personal_stories: array [1-3 personal stories]
-        - tone: string
-        - mentioned_people: array [1-3 people mentioned]
-        - mentioned_events: array [1-3 events mentioned]
-        - engagement_tags: array [1-3 audience engagement prompts]
-        - word_count: integer
-        - keywords: array [1-10 frequently used keywords]
-        - confidence: object with score for each field (0-1)
+        content: `Analyze this sermon comprehensively. Pre-processed data:
+        - Bible references: ${foundReferences.join(', ')}
+        ${hints ? '\nPre-processed hints:\n' + JSON.stringify(hints, null, 2) : ''}
 
-        Return JSON with the fields above.
-        If you cannot find a field, return null.`
+        Return JSON with ALL required fields and confidence scores:
+        {
+          // Core Content
+          "primary_scripture": string | null,
+          "scriptures": string[] | null,
+          "summary": string | null,
+          "sermon_type": MUST be EXACTLY one of: ${SERMON_TYPES.join(', ')} | null,
+          "key_points": string[] | null,
+          "illustrations": string[] | null,
+          "themes": string[] | null,
+          "calls_to_action": string[] | null,
+          "word_count": number | null,
+          
+          // Narrative Elements
+          "personal_stories": string[] | null,
+          "mentioned_people": string[] | null,
+          "mentioned_events": string[] | null,
+          "engagement_tags": string[] | null,
+          "tone": string | null,
+          
+          // Metadata
+          "title": string | null,
+          "date": string | null,
+          "preacher": string | null,
+          "topics": string[] | null,
+          "tags": MUST be array of EXACTLY these values (max 3): ${SERMON_TAGS.join(', ')} | null,
+          "series": string | null,
+          "location": string | null,
+          "keywords": string[] | null,
+          
+          // ALL confidence scores required (0-1)
+          "confidence": {
+            "primary_scripture": number,
+            "scriptures": number,
+            "summary": number,
+            "sermon_type": number,
+            "key_points": number,
+            "illustrations": number,
+            "themes": number,
+            "calls_to_action": number,
+            "word_count": number,
+            "personal_stories": number,
+            "mentioned_people": number,
+            "mentioned_events": number,
+            "engagement_tags": number,
+            "tone": number,
+            "title": number,
+            "date": number,
+            "preacher": number,
+            "topics": number,
+            "tags": number,
+            "series": number,
+            "location": number,
+            "keywords": number
+          }
+        }
+
+        CRITICAL REQUIREMENTS:
+        1. Include ALL confidence scores (0-1) even if field is null
+        2. sermon_type must be exactly one of the listed values
+        3. tags must be from provided list (max 3)
+        4. Use null for any field you cannot confidently determine
+        5. Analyze thoroughly before providing any field`
       },
       {
         role: "user",
-        content: cleanedText
+        content: text
       }
     ],
     temperature: 0,
     response_format: { type: "json_object" },
-    max_tokens: 4096
+    max_tokens: 4000
   });
 
-  console.log('OpenAI response:', response.choices[0].message.content);
+  const result = JSON.parse(response.choices[0].message.content || '{}');
 
-  return JSON.parse(response.choices[0].message.content || '{}');
+  // Validate sermon_type
+  if (result.sermon_type) {
+    const cleanedType = result.sermon_type.toLowerCase().replace(/\s+sermon$/, '');
+    result.sermon_type = SERMON_TYPES.includes(cleanedType as any) ? cleanedType : null;
+    if (!result.sermon_type) {
+      result.confidence.sermon_type = 0;
+    }
+  }
+
+  // Validate tags
+  if (result.tags) {
+    result.tags = result.tags
+      .filter((tag: string) => SERMON_TAGS.includes(tag as any))
+      .slice(0, 3);
+    
+    if (result.tags.length === 0) {
+      result.tags = null;
+      result.confidence.tags = 0;
+    }
+  }
+
+  return {
+    ...result,
+    confidence_scores: result.confidence
+  };
 }
