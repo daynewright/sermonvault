@@ -79,4 +79,20 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ sermo
       { status: 500 }
     );
   }
-} 
+}
+
+export async function GET(req: Request, { params }: { params: Promise<{ sermonId: string }> }) {
+  const supabase = createServerSupabaseClient();
+  const { sermonId } = await params;
+  const { data: sermon, error: sermonError } = await supabase.from('sermons').select('*').eq('id', sermonId).single();
+
+  if (sermonError) {
+    console.error('Error fetching sermon:', sermonError);
+    return NextResponse.json(
+      { error: 'Failed to fetch sermon' },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json(sermon); 
+}

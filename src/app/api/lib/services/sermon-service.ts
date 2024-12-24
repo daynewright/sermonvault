@@ -21,6 +21,41 @@ async function isSermonContent(text: string): Promise<boolean> {
   return response.choices[0].text.trim().toLowerCase() === 'true';
 }
 
+type SermonField = {
+  value: string | string[] | number | null;
+  confidence: number;
+};
+
+type SermonData = {
+  // Core Content
+  primary_scripture: SermonField;
+  scriptures: SermonField;
+  summary: SermonField;
+  sermon_type: SermonField;
+  key_points: SermonField;
+  illustrations: SermonField;
+  themes: SermonField;
+  calls_to_action: SermonField;
+  word_count: SermonField;
+  
+  // Narrative Elements
+  personal_stories: SermonField;
+  mentioned_people: SermonField;
+  mentioned_events: SermonField;
+  engagement_tags: SermonField;
+  tone: SermonField;
+  
+  // Metadata
+  title: SermonField;
+  date: SermonField;
+  preacher: SermonField;
+  topics: SermonField;
+  tags: SermonField;
+  series: SermonField;
+  location: SermonField;
+  keywords: SermonField;
+};
+
 export async function processSermonUpload(
   supabase: SupabaseClient,
   file: File,
@@ -132,9 +167,106 @@ export async function processSermonUpload(
     const chunks = await createSermonChunks(supabase, fullText, sermonId);
     console.log('Chunks created:', { count: chunks.length });
     
+    // Transform the data at the source
+    const sermonData: SermonData = {
+      // Core Content
+      primary_scripture: { 
+        value: extractedMetadata.primary_scripture || null, 
+        confidence: extractedMetadata.confidence_scores.primary_scripture 
+      },
+      scriptures: { 
+        value: extractedMetadata.scriptures || [], 
+        confidence: extractedMetadata.confidence_scores.scriptures 
+      },
+      summary: { 
+        value: extractedMetadata.summary || null, 
+        confidence: extractedMetadata.confidence_scores.summary 
+      },
+      sermon_type: { 
+        value: extractedMetadata.sermon_type || 'expository', 
+        confidence: extractedMetadata.confidence_scores.sermon_type 
+      },
+      key_points: { 
+        value: extractedMetadata.key_points || [], 
+        confidence: extractedMetadata.confidence_scores.key_points 
+      },
+      illustrations: { 
+        value: extractedMetadata.illustrations || [], 
+        confidence: extractedMetadata.confidence_scores.illustrations 
+      },
+      themes: { 
+        value: extractedMetadata.themes || [], 
+        confidence: extractedMetadata.confidence_scores.themes 
+      },
+      calls_to_action: { 
+        value: extractedMetadata.calls_to_action || [], 
+        confidence: extractedMetadata.confidence_scores.calls_to_action 
+      },
+      word_count: { 
+        value: extractedMetadata.word_count || 0, 
+        confidence: extractedMetadata.confidence_scores.word_count 
+      },
+
+      // Narrative Elements
+      personal_stories: { 
+        value: extractedMetadata.personal_stories || [], 
+        confidence: extractedMetadata.confidence_scores.personal_stories 
+      },
+      mentioned_people: { 
+        value: extractedMetadata.mentioned_people || [], 
+        confidence: extractedMetadata.confidence_scores.mentioned_people 
+      },
+      mentioned_events: { 
+        value: extractedMetadata.mentioned_events || [], 
+        confidence: extractedMetadata.confidence_scores.mentioned_events 
+      },
+      engagement_tags: { 
+        value: extractedMetadata.engagement_tags || [], 
+        confidence: extractedMetadata.confidence_scores.engagement_tags 
+      },
+      tone: { 
+        value: extractedMetadata.tone || null, 
+        confidence: extractedMetadata.confidence_scores.tone 
+      },
+
+      // Metadata
+      title: { 
+        value: extractedMetadata.title || 'Untitled Sermon', 
+        confidence: extractedMetadata.confidence_scores.title 
+      },
+      date: { 
+        value: sermonDate, 
+        confidence: extractedMetadata.confidence_scores.date 
+      },
+      preacher: { 
+        value: extractedMetadata.preacher || userName, 
+        confidence: extractedMetadata.confidence_scores.preacher 
+      },
+      topics: { 
+        value: extractedMetadata.topics || [], 
+        confidence: extractedMetadata.confidence_scores.topics 
+      },
+      tags: { 
+        value: extractedMetadata.tags || [], 
+        confidence: extractedMetadata.confidence_scores.tags 
+      },
+      series: { 
+        value: extractedMetadata.series || null, 
+        confidence: extractedMetadata.confidence_scores.series 
+      },
+      location: { 
+        value: extractedMetadata.location || 'Unknown Location', 
+        confidence: extractedMetadata.confidence_scores.location 
+      },
+      keywords: { 
+        value: extractedMetadata.keywords || [], 
+        confidence: extractedMetadata.confidence_scores.keywords 
+      }
+    };
+
     return {
       success: true,
-      sermon: metadata,
+      sermon: sermonData,
       chunkCount: chunks.length
     };
 
