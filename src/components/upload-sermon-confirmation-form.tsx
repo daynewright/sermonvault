@@ -34,58 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-
-type SermonField = {
-  value: string | string[] | number | null;
-  confidence: number;
-};
-
-export type SermonData = {
-  primary_scripture: SermonField;
-  scriptures: SermonField;
-  summary: SermonField;
-  sermon_type: SermonField;
-  key_points: SermonField;
-  illustrations: SermonField;
-  themes: SermonField;
-  calls_to_action: SermonField;
-  word_count: SermonField;
-  personal_stories: SermonField;
-  mentioned_people: SermonField;
-  mentioned_events: SermonField;
-  engagement_tags: SermonField;
-  tone: SermonField;
-  title: SermonField;
-  date: SermonField;
-  preacher: SermonField;
-  topics: SermonField;
-  tags: SermonField;
-  series: SermonField;
-  location: SermonField;
-  keywords: SermonField;
-};
-
-// Use the exact sermon types from the parser
-const SERMON_TYPES = ['expository', 'textual', 'topical', 'narrative'] as const;
-
-// Update the sermon tags constant to match the parser
-const SERMON_TAGS = [
-  'salvation',
-  'discipleship',
-  'faith',
-  'prayer',
-  'relationships',
-  'spiritual-warfare',
-  'evangelism',
-  'healing',
-  'worship',
-  'stewardship',
-  'identity',
-  'community',
-  'character',
-  'biblical-history',
-  'prophecy',
-] as const;
+import { SermonData, SERMON_TYPES, SERMON_TAGS } from '@/types/sermonData';
 
 export const UploadSermonConfirmationForm = ({
   setDialogOpen,

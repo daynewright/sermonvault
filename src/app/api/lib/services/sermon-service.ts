@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { extractSermonMetadata } from '@/app/api/lib/utils/sermon-parser';
 import { getOpenAIClient } from '@/app/api/lib/clients/openai';
+import { SermonData } from '@/types/sermonData';
 
 async function isSermonContent(text: string): Promise<boolean> {
   const openai = getOpenAIClient();
@@ -20,41 +21,6 @@ async function isSermonContent(text: string): Promise<boolean> {
 
   return response.choices[0].text.trim().toLowerCase() === 'true';
 }
-
-type SermonField = {
-  value: string | string[] | number | null;
-  confidence: number;
-};
-
-type SermonData = {
-  // Core Content
-  primary_scripture: SermonField;
-  scriptures: SermonField;
-  summary: SermonField;
-  sermon_type: SermonField;
-  key_points: SermonField;
-  illustrations: SermonField;
-  themes: SermonField;
-  calls_to_action: SermonField;
-  word_count: SermonField;
-  
-  // Narrative Elements
-  personal_stories: SermonField;
-  mentioned_people: SermonField;
-  mentioned_events: SermonField;
-  engagement_tags: SermonField;
-  tone: SermonField;
-  
-  // Metadata
-  title: SermonField;
-  date: SermonField;
-  preacher: SermonField;
-  topics: SermonField;
-  tags: SermonField;
-  series: SermonField;
-  location: SermonField;
-  keywords: SermonField;
-};
 
 export async function processSermonUpload(
   supabase: SupabaseClient,

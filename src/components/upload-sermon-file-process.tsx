@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 
 import { InputFile } from './file-upload';
 import { useToast } from '@/hooks/use-toast';
-import { SermonData } from './upload-sermon-confirmation-form';
-
+import { SermonData } from '@/types/sermonData';
 const processingPhrases = [
   'AI is reading your sermon...',
   'Analyzing the content...',

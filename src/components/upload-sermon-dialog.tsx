@@ -4,11 +4,9 @@ import { Button, ButtonProps } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 import { UploadSermonFileProcess } from './upload-sermon-file-process';
-import {
-  SermonData,
-  UploadSermonConfirmationForm,
-} from './upload-sermon-confirmation-form';
+import { UploadSermonConfirmationForm } from './upload-sermon-confirmation-form';
 import { toast } from '@/hooks/use-toast';
+import { SermonData } from '@/types/sermonData';
 
 type UploadSermonDialogProps = {
   buttonVariant?: ButtonProps['variant'];

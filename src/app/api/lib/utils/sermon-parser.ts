@@ -1,6 +1,6 @@
 import { findBibleReferences } from './bible-parser';
 import { getOpenAIClient } from '@/app/api/lib/clients/openai';
-
+import { SERMON_TYPES, SERMON_TAGS } from '@/types/sermonData';
 type ToneIndicator = {
   words: string[];
   weight: number;
@@ -84,17 +84,9 @@ export async function extractSermonMetadata(text: string) {
     illustrations: [
       ...text.matchAll(/(?:let me illustrate|here's an illustration|for example|imagine|picture this|consider this|think about|story of|parable|analogy|like|just as)[:\s]+([^.!?]+(?:[.!?]+[^.!?]+){0,3})/gi)
     ].map(match => match[1]?.replace(/\s+/g, ' ').trim()),
-    personal_stories: text.match(/(?:I remember|when I was|in my (?:own )?experience|my personal story|happened to me|in my life|years ago[^.!?]*I|I recall|I witnessed|I've seen|I learned|I discovered)[^.!?]*(?:[.!?]+[^.!?]+){0,3}[.!?]/gi)?.map(story => story.replace(/\s+/g, ' ').trim()) || [],
-    engagement_tags: text.match(/(?:raise your (?:hand|hands)|say amen|turn to your neighbor|repeat after me|let's pray|stand with me|bow your heads|open your Bible|write this down|remember this|let's read together|look with me|notice|consider)[^.!?]*[.!?]/gi)?.map(tag => tag.replace(/\s+/g, ' ').trim()) || []
   };
 
   const foundReferences = findBibleReferences(text);
-  const SERMON_TYPES = ['expository', 'textual', 'topical', 'narrative'] as const;
-  const SERMON_TAGS = [
-    'salvation', 'discipleship', 'faith', 'prayer', 'relationships',
-    'spiritual-warfare', 'evangelism', 'healing', 'worship', 'stewardship',
-    'identity', 'community', 'character', 'biblical-history', 'prophecy'
-  ] as const;
 
   const openai = getOpenAIClient();
 
@@ -125,7 +117,6 @@ export async function extractSermonMetadata(text: string) {
           "personal_stories": string[] | null,
           "mentioned_people": string[] | null,
           "mentioned_events": string[] | null,
-          "engagement_tags": string[] | null,
           "tone": string | null,
           
           // Metadata
