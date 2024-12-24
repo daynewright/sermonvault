@@ -131,9 +131,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ sermonId
     );
   }
 
-  // Fields to exclude from transformation
-  const excludedFields = ['id', 'user_id', 'created_at', 'confidence_scores'];
-
   // Transform the sermon data
   const fields: Record<string, SermonField> = {
     primary_scripture: { value: sermon.primary_scripture, confidence: sermon.confidence_scores?.primary_scripture || 0 },
@@ -160,12 +157,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ sermonId
     keywords: { value: sermon.keywords, confidence: sermon.confidence_scores?.keywords || 0 }
   };
 // If we need more fields, we can add them here
-  const transformedSermon = {
-    id: sermon.id,
-    userId: sermon.user_id,
-    createdAt: sermon.created_at,
-    fields
-  };
+  // const transformedSermon = {
+  //   id: sermon.id,
+  //   userId: sermon.user_id,
+  //   createdAt: sermon.created_at,
+  //   fields
+  // };
 
   return NextResponse.json(fields);
 }
