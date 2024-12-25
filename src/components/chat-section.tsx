@@ -9,11 +9,13 @@ import {
 } from '@/components/ui/chat/chat-bubble';
 import { ChatInput } from '@/components/ui/chat/chat-input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser } from '@/hooks/use-user';
+import { useUser } from '@/hooks/fetch/use-user';
 import { MarkdownResponse } from './markdown-response';
 import { EmptyState } from './empty-state';
 import { useSermonsStore } from '@/store/use-sermons-store';
+
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useChat } from '@/hooks/fetch/use-chat';
 
 type Message = {
   id: string;
@@ -23,7 +25,7 @@ type Message = {
 };
 
 export default function ChatSection() {
-  const { user } = useUser();
+  const { data: user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -31,6 +33,8 @@ export default function ChatSection() {
   const isMobile = useIsMobile();
 
   const sermonCount = useSermonsStore((state) => state.sermonCount);
+
+  const { mutateAsync: sendMessage } = useChat();
 
   const scrollToBottom = () => {
     // Find the Radix UI viewport element
@@ -67,48 +71,45 @@ export default function ChatSection() {
       };
       setMessages((prev) => [...prev, loadingMessage]);
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, messages }),
-      });
+      try {
+        const response = await sendMessage({ message, messages });
 
-      if (!response.ok) throw new Error('Failed to send message');
+        if (!response) throw new Error('No response available');
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
+        const reader = response.body?.getReader();
+        let aiMessage = '';
+        while (true) {
+          const result = await reader?.read();
+          if (!result || result.done) break;
 
-      let aiMessage = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+          const text = new TextDecoder().decode(result.value);
+          aiMessage += text;
 
-        const text = new TextDecoder().decode(value);
-        aiMessage += text;
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === loadingMessage.id
+                ? { ...msg, content: aiMessage, isLoading: false }
+                : msg
+            )
+          );
 
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === loadingMessage.id
-              ? { ...msg, content: aiMessage, isLoading: false }
-              : msg
-          )
-        );
-
-        // Force scroll after each update
-
-        requestAnimationFrame(() => {
-          scrollToBottom();
-        });
+          // Force scroll after each update
+          requestAnimationFrame(() => {
+            scrollToBottom();
+          });
+        }
+      } catch (error) {
+        console.error('Chat error:', error);
+      } finally {
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Chat error:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col relative">
       <ScrollArea ref={scrollAreaRef} className="flex-1 px-4 overflow-y-auto">
         <ChatMessageList className="text-sm">
           {messages.length === 0 && <EmptyState />}
@@ -146,15 +147,15 @@ export default function ChatSection() {
         </ChatMessageList>
       </ScrollArea>
 
-      <div className="border-t p-4 mb-14">
-        {sermonCount > 0 && (
+      {sermonCount > 0 && (
+        <div className="border-t p-4 absolute bottom-0 left-0 right-0 mb-10 max-w-full bg-white box-border">
           <ChatInput
             placeholder="Ask me about your sermons..."
             onSend={handleSendMessage}
             disabled={isLoading}
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

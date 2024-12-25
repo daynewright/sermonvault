@@ -4,8 +4,9 @@ import { useEffect, useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/hooks/use-user';
+import { useUser } from '@/hooks/fetch/use-user';
 import { useSermonsStore } from '@/store/use-sermons-store';
+import { useSermons } from '@/hooks/fetch/use-sermons';
 
 import {
   FileText,
@@ -54,47 +55,31 @@ export function SermonSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   const { toast } = useToast();
-  const { user, isLoading: isUserLoading } = useUser();
-  const [sermons, setSermons] = useState<Sermon[]>([]);
+  const { data: user, isLoading: isUserLoading } = useUser();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // const refreshCounter = useSermonsStore((state) => state.refreshCounter);
   const setSermonCount = useSermonsStore((state) => state.setSermonCount);
-  const loadingSermons = useSermonsStore((state) => state.loadingSermons);
-  const setLoadingSermons = useSermonsStore((state) => state.setLoadingSermons);
 
-  useEffect(() => {
-    if (user && !isUserLoading) {
-      fetchSermons();
-    }
-  }, [user, isUserLoading]);
+  const {
+    data: sermons = [],
+    isLoading,
+    error,
+    refetch: refetchSermons,
+  } = useSermons();
+
+  if (error) {
+    toast({
+      variant: 'destructive',
+      title: 'Error',
+      description: 'Failed to load sermons',
+    });
+  }
 
   useEffect(() => {
     setSermonCount(sermons.length);
   }, [sermons]);
-
-  const fetchSermons = async () => {
-    if (!user) return;
-    setLoadingSermons(true);
-
-    try {
-      const response = await fetch('/api/sermons');
-      if (!response.ok) throw new Error('Failed to fetch sermons');
-      const data = await response.json();
-      setSermons(data);
-    } catch (err) {
-      console.error('Error fetching sermons:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load sermons',
-      });
-    } finally {
-      setLoadingSermons(false);
-    }
-  };
 
   const handleDelete = async (sermon: Sermon) => {
     setSermonToDelete(null);
@@ -107,7 +92,7 @@ export function SermonSidebar({
 
       if (!response.ok) throw new Error('Failed to delete sermon');
 
-      setSermons(sermons.filter((s) => s.id !== sermon.id));
+      refetchSermons();
       toast({
         description: 'Sermon deleted successfully',
       });
@@ -127,7 +112,7 @@ export function SermonSidebar({
     if (!searchQuery.trim()) return sermons;
 
     return sermons.filter(
-      (sermon) =>
+      (sermon: Sermon) =>
         sermon.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         sermon.preacher.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -173,39 +158,37 @@ export function SermonSidebar({
             </div>
 
             <div className="p-4 space-y-2">
-              {loadingSermons ? (
+              {isLoading ? (
                 <p className="text-sm text-muted-foreground">Loading...</p>
               ) : filteredSermons.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No sermons found
                 </p>
               ) : (
-                filteredSermons.map((sermon) => (
+                filteredSermons.map((sermon: Sermon) => (
                   <Popover key={sermon.id}>
                     <PopoverTrigger asChild>
                       <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent group max-w-full cursor-pointer">
                         <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <>
-                          <div className="text-sm truncate flex-1 max-w-[150px]">
-                            {sermon.title}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSermonToDelete(sermon);
-                            }}
-                            disabled={deletingId === sermon.id}
-                          >
-                            {deletingId === sermon.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </Button>
-                        </>
+                        <div className="text-sm truncate flex-1 max-w-[150px]">
+                          {sermon.title}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSermonToDelete(sermon);
+                          }}
+                          disabled={deletingId === sermon.id}
+                        >
+                          {deletingId === sermon.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
                       </div>
                     </PopoverTrigger>
                     <PopoverContent

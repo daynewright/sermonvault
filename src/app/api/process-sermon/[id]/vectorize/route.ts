@@ -1,9 +1,49 @@
 import { NextResponse } from 'next/server';
 import { OpenAIEmbeddings } from '@langchain/openai';
-import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 
 import { createServerSupabaseClient } from '@/app/api/lib/clients/supabase';
 import { ProcessingRecord } from '@/types/processingRecord';
+
+function splitIntoSentences(text: string): string[] {
+  const exceptions = ['Mr.', 'Mrs.', 'Dr.', 'Ph.D.', 'e.g.', 'i.e.', 'etc.', 'vs.', 'Rev.'];
+  let workingText = text;
+  
+  // Temporarily replace exceptions
+  exceptions.forEach((exc, i) => {
+    workingText = workingText.replace(new RegExp(`\\b${exc}\\b`, 'g'), `##${i}##`);
+  });
+  
+  // Split on sentence boundaries
+  const sentences = workingText.match(/[^.!?]+(?:[.!?]+|$)/g) || [];
+  
+  // Restore exceptions
+  return sentences.map(sentence => {
+    exceptions.forEach((exc, i) => {
+      sentence = sentence.replace(new RegExp(`##${i}##`, 'g'), exc);
+    });
+    return sentence.trim();
+  });
+}
+
+function createChunks(sentences: string[], maxChunkSize: number = 1000): string[] {
+  const chunks: string[] = [];
+  let currentChunk = '';
+  
+  for (const sentence of sentences) {
+    if ((currentChunk + sentence).length > maxChunkSize && currentChunk) {
+      chunks.push(currentChunk.trim());
+      currentChunk = sentence;
+    } else {
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
+    }
+  }
+  
+  if (currentChunk) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  return chunks;
+}
 
 export async function POST(
   req: Request,
@@ -36,24 +76,19 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // Split text into chunks
-    const splitter = new RecursiveCharacterTextSplitter({
-      chunkSize: 1000,
-      chunkOverlap: 200,
-    });
+    const sentences = splitIntoSentences(processingRecord.text);
+    const chunks = createChunks(sentences);
 
-    const chunks = await splitter.createDocuments([processingRecord.text]);
-    
     // Create embeddings
     const embeddings = new OpenAIEmbeddings();
     
     // Process chunks and create vector embeddings
     const chunkData = await Promise.all(
       chunks.map(async (chunk, index) => {
-        const embedding = await embeddings.embedQuery(chunk.pageContent);
+        const embedding = await embeddings.embedQuery(chunk);
         return {
           sermon_id: processingRecord!.sermon_id,
-          content: chunk.pageContent,
+          content: chunk,
           embedding,
           chunk_index: index,
           chunk_type: 'content' // You might want to detect different types

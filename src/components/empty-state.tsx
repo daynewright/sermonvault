@@ -1,10 +1,11 @@
 'use client';
 
-import { useSermonsStore } from '@/store/use-sermons-store';
+import { useSermons } from '@/hooks/fetch/use-sermons';
 
 export function EmptyState() {
-  const sermonCount = useSermonsStore((state) => state.sermonCount);
-  const loadingSermons = useSermonsStore((state) => state.loadingSermons);
+  const { data: sermons = [], isLoading: loadingSermons } = useSermons();
+
+  const sermonCount = sermons.length;
 
   if (sermonCount === 0) {
     return (

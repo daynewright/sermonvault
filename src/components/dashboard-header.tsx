@@ -1,11 +1,11 @@
 import { NotebookPen } from 'lucide-react';
-import { useUser } from '@/hooks/use-user';
+import { useUser } from '@/hooks/fetch/use-user';
 import { cn } from '@/lib/utils';
 import { AvatarDropdown } from '@/components/avatar-dropdown';
 import { UploadSermonDialog } from '@/components/upload-sermon-dialog';
 
 export const DashboardHeader = ({ className }: { className?: string }) => {
-  const { user } = useUser();
+  const { data: user } = useUser();
 
   return (
     <div className={cn('flex h-16 items-center px-4', className)}>
