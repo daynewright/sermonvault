@@ -1,7 +1,10 @@
 'use client';
 
+import { useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ChatSection from '@/components/chat-section';
+import { SectionChat } from '@/components/section-chat';
+import { SectionSermons } from '@/components/section-sermons';
+import { SectionReports } from '@/components/section-reports';
 import { SermonSidebar } from '@/components/sermon-sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { MessageCircle, BookOpen, BarChart } from 'lucide-react';
@@ -14,6 +17,20 @@ import { DashboardHeader } from '@/components/dashboard-header';
 import { Separator } from '@/components/ui/separator';
 
 const DashboardPage = () => {
+  const renderTabContent = useCallback(
+    (Component: React.FC, tabValue: string) => {
+      return (
+        <TabsContent
+          value={tabValue}
+          className="flex-1 overflow-y-auto h-[calc(100vh-10rem)]"
+        >
+          <Component />
+        </TabsContent>
+      );
+    },
+    []
+  );
+
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
@@ -52,36 +69,12 @@ const DashboardPage = () => {
                     </TabsTrigger>
                   </TabsList>
                 </div>
-                <TabsContent
-                  value="chat"
-                  className="flex-1 overflow-y-auto h-[calc(100vh-10rem)]"
-                >
-                  <ChatSection />
-                </TabsContent>
-                <TabsContent
-                  value="sermons"
-                  className="flex-1 overflow-y-auto h-[calc(100vh-10rem)]"
-                >
-                  <div className="text-center py-8">
-                    <h3 className="text-lg font-semibold">Sermons View</h3>
-                    <p className="text-muted-foreground">
-                      View and manage your sermons
-                    </p>
-                  </div>
-                </TabsContent>
-                <TabsContent
-                  value="reports"
-                  className="flex-1 overflow-y-auto h-[calc(100vh-10rem)]"
-                >
-                  <div className="text-center py-8">
-                    <h3 className="text-lg font-semibold">Reports View</h3>
-                    <p className="text-muted-foreground">
-                      Analytics and insights about your sermons
-                    </p>
-                  </div>
-                </TabsContent>
+                {renderTabContent(SectionChat, 'chat')}
+                {renderTabContent(SectionSermons, 'sermons')}
+                {renderTabContent(SectionReports, 'reports')}
               </Tabs>
             </div>
+            <Toaster />
             <Toaster />
           </main>
         </SidebarInset>

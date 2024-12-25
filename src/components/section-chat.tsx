@@ -24,7 +24,7 @@ type Message = {
   isLoading?: boolean;
 };
 
-export default function ChatSection() {
+export const SectionChat = () => {
   const { data: user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -162,4 +162,4 @@ export default function ChatSection() {
       </div>
     </div>
   );
-}
+};
