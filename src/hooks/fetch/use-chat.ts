@@ -5,9 +5,7 @@ type SendMessageParams = {
   messages: any[];
 };
 
-type SendMessageResponse = Response;
-
-const sendMessage = async ({ message, messages }: SendMessageParams): Promise<SendMessageResponse> => {
+const sendMessage = async ({ message, messages }: SendMessageParams): Promise<Response> => {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: {

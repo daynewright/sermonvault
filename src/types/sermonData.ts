@@ -4,6 +4,7 @@ export type SermonField = {
 };
 
 export type SermonData = {
+  id: SermonField;
   // Core Content
   primary_scripture: SermonField;
   scriptures: SermonField;

@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { UploadSermonFileProcess } from '@/components/upload-sermon-file-process';
 import { UploadSermonConfirmationForm } from '@/components/upload-sermon-confirmation-form';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { toast } from '@/hooks/use-toast';
 
 import { SermonData } from '@/types/sermonData';
 
@@ -52,23 +51,14 @@ export function UploadSermonDialog({ buttonVariant }: UploadSermonDialogProps) {
             <UploadSermonFileProcess
               setSermonData={setSermonData}
               setIsProcessing={setIsProcessing}
+              isProcessing={isProcessing}
             />
           )}
           {sermonData && (
             <UploadSermonConfirmationForm
+              clearSermonData={() => setSermonData(null)}
               setDialogOpen={setDialogOpen}
-              initialData={sermonData}
-              onSubmit={(data) => {
-                // Handle the submission here
-                console.log('Submitted data:', data);
-                setSermonData(null);
-                setDialogOpen(false);
-                toast({
-                  title: 'Sermon updated successfully',
-                  description:
-                    'Your sermon has been updated and is ready to be reviewed.',
-                });
-              }}
+              initialData={sermonData!}
             />
           )}
         </div>

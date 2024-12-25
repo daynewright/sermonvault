@@ -35,19 +35,60 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { SermonData, SERMON_TYPES, SERMON_TAGS } from '@/types/sermonData';
+import { useUpdateSermon } from '@/hooks/fetch/use-sermons';
+import { useToast } from '@/hooks/use-toast';
 
 export const UploadSermonConfirmationForm = ({
   setDialogOpen,
+  clearSermonData,
   initialData,
-  onSubmit,
 }: {
   setDialogOpen: (open: boolean) => void;
+  clearSermonData: () => void;
   initialData: SermonData;
-  onSubmit: (data: SermonData) => void;
 }) => {
   const [formData, setFormData] = useState<SermonData>(initialData);
+  const { mutateAsync: updateSermon, isPending } = useUpdateSermon();
+  const { toast } = useToast();
 
-  console.log('formData', formData);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const response = await updateSermon({
+        sermonId: formData.id.value as string,
+        data: Object.keys(formData).reduce((acc, key) => {
+          acc[key as keyof SermonData] =
+            formData[key as keyof SermonData].value;
+          return acc;
+        }, {} as { [key in keyof SermonData]: SermonData[key]['value'] }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Sermon updated successfully',
+          description:
+            'Your sermon has been updated and is ready to be reviewed.',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          variant: 'destructive',
+          description:
+            'There was an error updating your sermon. But the data was saved and you can try again later.',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        variant: 'destructive',
+        description:
+          'There was an error updating your sermon. But the data was saved and you can try again later.',
+      });
+    }
+    setDialogOpen(false);
+    clearSermonData();
+  };
 
   const getConfidenceIndicator = (confidence: number) => {
     if (confidence > 0.75) {
@@ -294,12 +335,6 @@ export const UploadSermonConfirmationForm = ({
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-    setDialogOpen(false);
-  };
-
   return (
     <>
       <DialogTitle className="text-xl font-semibold">
@@ -377,10 +412,16 @@ export const UploadSermonConfirmationForm = ({
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={() => setDialogOpen(false)}>
+          <Button
+            variant="outline"
+            onClick={() => setDialogOpen(false)}
+            disabled={isPending}
+          >
             Cancel
           </Button>
-          <Button type="submit">Confirm</Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? 'Saving...' : 'Confirm'}
+          </Button>
         </div>
       </form>
     </>

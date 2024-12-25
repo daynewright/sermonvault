@@ -133,6 +133,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ sermonId
 
   // Transform the sermon data
   const fields: Record<string, SermonField> = {
+    id: { value: sermon.id, confidence: sermon.confidence_scores?.id || 0 },
     primary_scripture: { value: sermon.primary_scripture, confidence: sermon.confidence_scores?.primary_scripture || 0 },
     scriptures: { value: sermon.scriptures, confidence: sermon.confidence_scores?.scriptures || 0 },
     summary: { value: sermon.summary, confidence: sermon.confidence_scores?.summary || 0 },
@@ -166,3 +167,47 @@ export async function GET(req: Request, { params }: { params: Promise<{ sermonId
 
   return NextResponse.json(fields);
 }
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ sermonId: string }> }) {
+  try {
+    const supabase = createServerSupabaseClient();
+    const { sermonId } = await params;
+    
+    // Read the request body
+    const body = await req.json();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { data: sermon, error: sermonError } = await supabase
+      .from('sermons')
+      .update({
+        ...body
+      })
+      .eq('id', sermonId)
+      .eq('user_id', user.id)
+      .select('id, title, created_at, updated_at')
+      .single();
+
+    if (sermonError) {
+      console.error('Error updating sermon:', sermonError);
+      return NextResponse.json(
+        { error: 'Failed to update sermon' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(sermon);
+  } catch (error) {
+    console.error('Error updating sermon:', error);
+    return NextResponse.json(
+      { error: 'Failed to update sermon' },
+      { status: 500 }
+    );
+  }
+} 

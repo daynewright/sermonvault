@@ -21,13 +21,14 @@ type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'error';
 type UploadSermonFileProcessProps = {
   setSermonData: (data: SermonData) => void;
   setIsProcessing: (isProcessing: boolean) => void;
+  isProcessing: boolean;
 };
 
 export const UploadSermonFileProcess = ({
   setSermonData,
   setIsProcessing,
+  isProcessing,
 }: UploadSermonFileProcessProps) => {
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const { toast } = useToast();
   const [processingStatus, setProcessingStatus] = useState<
@@ -61,7 +62,7 @@ export const UploadSermonFileProcess = ({
       return;
     }
 
-    setIsUploading(true);
+    setIsProcessing(true);
     setProcessingStatus({});
 
     try {
@@ -129,13 +130,15 @@ export const UploadSermonFileProcess = ({
         description: uploadedFile.name,
       });
     } finally {
-      setIsUploading(false);
+      setIsProcessing(false);
       setCurrentStep('');
     }
   };
 
   useEffect(() => {
-    setIsProcessing(currentStep !== 'completed' && currentStep !== 'error');
+    if (currentStep) {
+      setIsProcessing(currentStep !== 'completed' && currentStep !== 'error');
+    }
   }, [currentStep, setIsProcessing]);
 
   return (
@@ -150,7 +153,7 @@ export const UploadSermonFileProcess = ({
         If you decide to delete a sermon, it will be removed from the AI&apos;s
         memory.
       </DialogDescription>
-      {isUploading ? (
+      {isProcessing ? (
         <div className="flex-1 overflow-y-auto space-y-4">
           {processingSteps.map((step) => (
             <div key={step.id} className="flex items-center gap-3">
@@ -182,8 +185,8 @@ export const UploadSermonFileProcess = ({
           <InputFile onFileSelect={handleFileSelect} />
         </div>
       )}
-      {uploadedFile && !isUploading && (
-        <Button className="mt-4" onClick={handleUpload} disabled={isUploading}>
+      {uploadedFile && !isProcessing && (
+        <Button className="mt-4" onClick={handleUpload} disabled={isProcessing}>
           Upload selected file
         </Button>
       )}

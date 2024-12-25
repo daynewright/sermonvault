@@ -135,6 +135,10 @@ export async function processSermonUpload(
     
     // Transform the data at the source
     const sermonData: SermonData = {
+      id: {
+        value: sermonId,
+        confidence: 1
+      },
       // Core Content
       primary_scripture: { 
         value: extractedMetadata.primary_scripture || null, 
