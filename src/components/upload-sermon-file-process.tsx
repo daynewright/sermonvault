@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DialogTitle, DialogDescription } from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/button';
 import { InputFile } from './file-upload';
@@ -20,10 +20,12 @@ type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'error';
 
 type UploadSermonFileProcessProps = {
   setSermonData: (data: SermonData) => void;
+  setIsProcessing: (isProcessing: boolean) => void;
 };
 
 export const UploadSermonFileProcess = ({
   setSermonData,
+  setIsProcessing,
 }: UploadSermonFileProcessProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -131,6 +133,10 @@ export const UploadSermonFileProcess = ({
       setCurrentStep('');
     }
   };
+
+  useEffect(() => {
+    setIsProcessing(currentStep !== 'completed' && currentStep !== 'error');
+  }, [currentStep, setIsProcessing]);
 
   return (
     <>

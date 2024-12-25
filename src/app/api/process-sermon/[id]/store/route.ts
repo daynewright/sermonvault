@@ -63,19 +63,20 @@ export async function POST(
       throw new Error(`Failed to upload file: ${uploadError.message}`);
     }
 
-    // Get the public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('sermons')
-      .getPublicUrl(filePath);
-
     // Update sermon record with file path
     await supabase
       .from('sermons')
       .update({ 
         file_path: filePath,
-        public_url: publicUrl
       })
       .eq('id', processingRecord.sermon_id);
+
+    await supabase
+      .from('sermon_processing')
+      .update({
+        file_path: filePath
+      })
+      .eq('id', id);
 
     // Update processing record to completed
     await supabase
@@ -89,8 +90,7 @@ export async function POST(
       processingId: id,
       sermonId: processingRecord.sermon_id,
       status: 'completed',
-      filePath,
-      publicUrl
+      filePath
     });
 
   } catch (error) {

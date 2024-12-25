@@ -17,20 +17,42 @@ type UploadSermonDialogProps = {
 export function UploadSermonDialog({ buttonVariant }: UploadSermonDialogProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sermonData, setSermonData] = useState<SermonData | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const isMobile = useIsMobile();
 
+  const handleOpenChange = (open: boolean) => {
+    if (!isProcessing) {
+      setDialogOpen(open);
+    }
+  };
+
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant={buttonVariant} size={isMobile ? 'icon' : 'sm'}>
           <FilePlus className="w-4 h-4" />
           {!isMobile && 'Upload a sermon'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px] min-h-[500px] max-h-[90vh] flex flex-col">
+      <DialogContent
+        className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px] min-h-[500px] max-h-[90vh] flex flex-col"
+        onPointerDownOutside={(e) => {
+          if (isProcessing) {
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          if (isProcessing) {
+            e.preventDefault();
+          }
+        }}
+      >
         <div className="flex-1 overflow-y-auto pr-6 pl-2">
           {!sermonData && (
-            <UploadSermonFileProcess setSermonData={setSermonData} />
+            <UploadSermonFileProcess
+              setSermonData={setSermonData}
+              setIsProcessing={setIsProcessing}
+            />
           )}
           {sermonData && (
             <UploadSermonConfirmationForm
