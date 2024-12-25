@@ -29,20 +29,23 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     return (
       <div className="relative">
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          autoComplete="off"
-          ref={ref}
-          rows={1}
-          name="message"
-          className={cn(
-            'pr-12 max-h-12 px-4 py-3 bg-background text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full rounded-md flex items-center h-16 resize-none',
-            className
-          )}
-          {...props}
-        />
+        <div className="relative">
+          <Textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            ref={ref}
+            rows={1}
+            name="message"
+            style={{ paddingRight: '3rem' }}
+            className={cn(
+              'max-h-12 px-4 py-3 bg-background text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full rounded-md flex items-center h-16 resize-none',
+              className
+            )}
+            {...props}
+          />
+        </div>
         <Button
           size="icon"
           variant="ghost"
