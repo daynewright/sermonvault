@@ -41,6 +41,7 @@ export default function ChatSection() {
     const viewport = scrollAreaRef.current?.querySelector(
       '[data-radix-scroll-area-viewport]'
     );
+
     if (viewport) {
       viewport.scrollTop = viewport.scrollHeight;
     }
@@ -49,7 +50,7 @@ export default function ChatSection() {
   // Scroll when messages change
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages.length]);
 
   const handleSendMessage = async (message: string) => {
     try {
@@ -109,53 +110,56 @@ export default function ChatSection() {
   };
 
   return (
-    <div className="h-full flex flex-col relative">
-      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4 overflow-y-auto">
-        <ChatMessageList className="text-sm">
-          {messages.length === 0 && <EmptyState />}
-          {messages.map((message) => (
-            <ChatBubble
-              key={message.id}
-              variant={message.role === 'user' ? 'sent' : 'received'}
-            >
-              {!isMobile && (
-                <ChatBubbleAvatar
-                  src={
-                    message.role === 'user'
-                      ? user?.user_metadata.avatar_url
-                      : undefined
-                  }
-                  fallback={
-                    message.role === 'user'
-                      ? user?.user_metadata.name?.charAt(0)
-                      : 'AI'
-                  }
-                />
-              )}
-              <ChatBubbleMessage
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea ref={scrollAreaRef} className="h-full">
+          <ChatMessageList className="text-sm px-4 pb-4">
+            {messages.length === 0 && <EmptyState />}
+            {messages.map((message) => (
+              <ChatBubble
+                key={message.id}
                 variant={message.role === 'user' ? 'sent' : 'received'}
-                isLoading={message.isLoading}
               >
-                {message.role === 'assistant' ? (
-                  <MarkdownResponse content={message.content} />
-                ) : (
-                  message.content
+                {!isMobile && (
+                  <ChatBubbleAvatar
+                    src={
+                      message.role === 'user'
+                        ? user?.user_metadata.avatar_url
+                        : undefined
+                    }
+                    fallback={
+                      message.role === 'user'
+                        ? user?.user_metadata.name?.charAt(0)
+                        : 'AI'
+                    }
+                  />
                 )}
-              </ChatBubbleMessage>
-            </ChatBubble>
-          ))}
-        </ChatMessageList>
-      </ScrollArea>
-
-      {sermonCount > 0 && (
-        <div className="border-t p-4 absolute bottom-0 left-0 right-0 mb-10 max-w-full bg-white box-border">
-          <ChatInput
-            placeholder="Ask me about your sermons..."
-            onSend={handleSendMessage}
-            disabled={isLoading}
-          />
+                <ChatBubbleMessage
+                  variant={message.role === 'user' ? 'sent' : 'received'}
+                  isLoading={message.isLoading}
+                >
+                  {message.role === 'assistant' ? (
+                    <MarkdownResponse content={message.content} />
+                  ) : (
+                    message.content
+                  )}
+                </ChatBubbleMessage>
+              </ChatBubble>
+            ))}
+          </ChatMessageList>
+        </ScrollArea>
+      </div>
+      <div className="border-t bg-white shrink-0">
+        <div className="p-4">
+          {sermonCount > 0 && (
+            <ChatInput
+              placeholder="Ask me about your sermons..."
+              onSend={handleSendMessage}
+              disabled={isLoading}
+            />
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

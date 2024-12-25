@@ -54,13 +54,13 @@ const DashboardPage = () => {
                 </div>
                 <TabsContent
                   value="chat"
-                  className="flex-1 overflow-y-auto h-full"
+                  className="flex-1 overflow-y-auto h-[calc(100vh-10rem)]"
                 >
                   <ChatSection />
                 </TabsContent>
                 <TabsContent
                   value="sermons"
-                  className="flex-1 overflow-y-auto h-full"
+                  className="flex-1 overflow-y-auto h-[calc(100vh-10rem)]"
                 >
                   <div className="text-center py-8">
                     <h3 className="text-lg font-semibold">Sermons View</h3>
@@ -71,7 +71,7 @@ const DashboardPage = () => {
                 </TabsContent>
                 <TabsContent
                   value="reports"
-                  className="flex-1 overflow-y-auto h-full"
+                  className="flex-1 overflow-y-auto h-[calc(100vh-10rem)]"
                 >
                   <div className="text-center py-8">
                     <h3 className="text-lg font-semibold">Reports View</h3>
