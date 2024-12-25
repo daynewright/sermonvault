@@ -4,10 +4,11 @@ import { useEffect, useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/hooks/use-user';
+import { useSermonsStore } from '@/store/use-sermons-store';
+
 import {
   FileText,
-  PanelLeftClose,
-  PanelLeftOpen,
   Trash2,
   Loader2,
   CalendarIcon,
@@ -15,8 +16,6 @@ import {
   BookOpen,
   Search,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useUser } from '@/hooks/use-user';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,13 +26,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useSermonsStore } from '@/store/use-sermons-store';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarHeader,
+} from './ui/sidebar';
 
 type Sermon = {
   id: string;
@@ -46,23 +50,26 @@ type Sermon = {
   uploadedAt: string;
 };
 
-export function SermonSidebar() {
+export function SermonSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
   const { toast } = useToast();
   const { user, isLoading: isUserLoading } = useUser();
   const [sermons, setSermons] = useState<Sermon[]>([]);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const refreshCounter = useSermonsStore((state) => state.refreshCounter);
+  // const refreshCounter = useSermonsStore((state) => state.refreshCounter);
   const setSermonCount = useSermonsStore((state) => state.setSermonCount);
   const loadingSermons = useSermonsStore((state) => state.loadingSermons);
   const setLoadingSermons = useSermonsStore((state) => state.setLoadingSermons);
 
   useEffect(() => {
-    fetchSermons();
-  }, [user, isUserLoading, refreshCounter]);
+    if (user && !isUserLoading) {
+      fetchSermons();
+    }
+  }, [user, isUserLoading]);
 
   useEffect(() => {
     setSermonCount(sermons.length);
@@ -143,35 +150,16 @@ export function SermonSidebar() {
   }
 
   return (
-    <>
-      <div
-        className={cn(
-          'border-r h-[calc(100vh-4rem)] flex flex-col transition-all duration-300',
-          isCollapsed ? 'w-16' : 'w-64'
-        )}
-      >
-        <div className="p-4 border-b flex justify-between items-center">
-          {!isCollapsed && (
-            <div className="text-sm font-medium">
-              Sermons ({filteredSermons.length})
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8"
-          >
-            {isCollapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" />
-            )}
-          </Button>
+    <Sidebar {...props}>
+      <SidebarHeader className="p-4 border-b flex justify-between items-center">
+        <div className="text-sm font-medium">
+          Sermons ({filteredSermons.length})
         </div>
+      </SidebarHeader>
 
-        <ScrollArea className="flex-1">
-          {!isCollapsed && (
+      <SidebarContent>
+        <SidebarGroup>
+          <ScrollArea className="flex-1">
             <div className="p-4 border-b">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
@@ -183,24 +171,22 @@ export function SermonSidebar() {
                 />
               </div>
             </div>
-          )}
 
-          <div className="p-4 space-y-2">
-            {loadingSermons ? (
-              <p className="text-sm text-muted-foreground">Loading...</p>
-            ) : filteredSermons.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {isCollapsed ? 'Empty' : 'No sermons found'}
-              </p>
-            ) : (
-              filteredSermons.map((sermon) => (
-                <Popover key={sermon.id}>
-                  <PopoverTrigger asChild>
-                    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent group max-w-[230px] cursor-pointer">
-                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                      {!isCollapsed && (
+            <div className="p-4 space-y-2">
+              {loadingSermons ? (
+                <p className="text-sm text-muted-foreground">Loading...</p>
+              ) : filteredSermons.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No sermons found
+                </p>
+              ) : (
+                filteredSermons.map((sermon) => (
+                  <Popover key={sermon.id}>
+                    <PopoverTrigger asChild>
+                      <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent group max-w-full cursor-pointer">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                         <>
-                          <div className="text-sm truncate flex-1">
+                          <div className="text-sm truncate flex-1 max-w-[150px]">
                             {sermon.title}
                           </div>
                           <Button
@@ -220,93 +206,94 @@ export function SermonSidebar() {
                             )}
                           </Button>
                         </>
-                      )}
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-80"
-                    align="start"
-                    sideOffset={5}
-                    alignOffset={20}
-                  >
-                    <div className="space-y-4">
-                      <div className="border-b pb-2">
-                        <h4 className="text-xs font-semibold leading-none mb-1">
-                          {sermon.title}
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          by {sermon.preacher}
-                        </p>
                       </div>
-
-                      <div className="space-y-1">
-                        {sermon.date && (
-                          <div className="flex items-center gap-2 text-xs">
-                            <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-                            <span>
-                              {new Date(sermon.date).toLocaleDateString(
-                                undefined,
-                                {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                }
-                              )}
-                            </span>
-                          </div>
-                        )}
-                        {sermon.location && (
-                          <div className="flex items-center gap-2 text-xs">
-                            <MapPinIcon className="h-3 w-3 text-muted-foreground" />
-                            <span>{sermon.location}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-xs">
-                          <BookOpen className="h-3 w-3 text-muted-foreground" />
-                          <span>{sermon.pageCount} pages</span>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-80"
+                      align="start"
+                      sideOffset={5}
+                      alignOffset={20}
+                    >
+                      <div className="space-y-4">
+                        <div className="border-b pb-2">
+                          <h4 className="text-xs font-semibold leading-none mb-1">
+                            {sermon.title}
+                          </h4>
+                          <p className="text-xs text-muted-foreground">
+                            by {sermon.preacher}
+                          </p>
                         </div>
-                      </div>
 
-                      <div className="border-t pt-2 mt-1">
-                        <div className="flex flex-col gap-2">
-                          <div className="flex justify-between items-center text-[10px] text-muted-foreground">
-                            <span>
-                              Added{' '}
-                              {new Date(sermon.uploadedAt).toLocaleDateString()}
-                            </span>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-[10px] text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                                onClick={() => {}}
-                              >
-                                View File
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSermonToDelete(sermon);
-                                }}
-                              >
-                                Delete Sermon
-                              </Button>
+                        <div className="space-y-1">
+                          {sermon.date && (
+                            <div className="flex items-center gap-2 text-xs">
+                              <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                              <span>
+                                {new Date(sermon.date).toLocaleDateString(
+                                  undefined,
+                                  {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                  }
+                                )}
+                              </span>
+                            </div>
+                          )}
+                          {sermon.location && (
+                            <div className="flex items-center gap-2 text-xs">
+                              <MapPinIcon className="h-3 w-3 text-muted-foreground" />
+                              <span>{sermon.location}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-xs">
+                            <BookOpen className="h-3 w-3 text-muted-foreground" />
+                            <span>{sermon.pageCount} pages</span>
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-2 mt-1">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                              <span>
+                                Added{' '}
+                                {new Date(
+                                  sermon.uploadedAt
+                                ).toLocaleDateString()}
+                              </span>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                  onClick={() => {}}
+                                >
+                                  View File
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSermonToDelete(sermon);
+                                  }}
+                                >
+                                  Delete Sermon
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-
+                    </PopoverContent>
+                  </Popover>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </SidebarGroup>
+      </SidebarContent>
       <AlertDialog
         open={!!sermonToDelete}
         onOpenChange={() => setSermonToDelete(null)}
@@ -331,6 +318,6 @@ export function SermonSidebar() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </Sidebar>
   );
 }

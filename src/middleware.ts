@@ -11,21 +11,22 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession();
 
   // If no session and trying to access protected route
-  if (!session && req.nextUrl.pathname.startsWith('/chat')) {
+  if (!session && req.nextUrl.pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
   // If session exists and trying to access auth routes
   if (session && (
-    req.nextUrl.pathname === '/login' || 
-    req.nextUrl.pathname === '/'
-  )) {
-    return NextResponse.redirect(new URL('/chat', req.url));
+      req.nextUrl.pathname === '/login' ||
+      req.nextUrl.pathname === '/'
+    )
+  ) {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
   return res;
 }
 
 export const config = {
-  matcher: ['/', '/login', '/chat/:path*'],
+  matcher: ['/', '/login', '/dashboard/:path*'],
 };

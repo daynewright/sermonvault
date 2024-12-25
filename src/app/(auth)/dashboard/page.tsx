@@ -1,0 +1,93 @@
+'use client';
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ChatSection from '@/components/chat-section';
+import { SermonSidebar } from '@/components/sermon-sidebar';
+import { Toaster } from '@/components/ui/toaster';
+import { MessageCircle, BookOpen, BarChart } from 'lucide-react';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { DashboardHeader } from '@/components/dashboard-header';
+import { Separator } from '@/components/ui/separator';
+
+const DashboardPage = () => {
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen w-full">
+        <SermonSidebar />
+        <SidebarInset>
+          <main className="flex-1 flex flex-col h-full">
+            <div className="flex items-center w-full border-b">
+              <SidebarTrigger className="mx-2" />
+              <Separator orientation="vertical" className="my-2 h-4" />
+              <DashboardHeader className="flex-1" />
+            </div>
+            <div className="flex-1 container max-w-4xl mx-auto px-4 py-6 overflow-hidden">
+              <Tabs defaultValue="chat" className="w-full h-full space-y-6">
+                <div className="flex justify-center">
+                  <TabsList className="grid grid-cols-3">
+                    <TabsTrigger
+                      value="chat"
+                      className="flex items-center gap-2"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Chat
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="sermons"
+                      className="flex items-center gap-2"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Sermons
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="reports"
+                      className="flex items-center gap-2"
+                    >
+                      <BarChart className="h-4 w-4" />
+                      Reports
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                <TabsContent
+                  value="chat"
+                  className="flex-1 overflow-y-auto h-full"
+                >
+                  <ChatSection />
+                </TabsContent>
+                <TabsContent
+                  value="sermons"
+                  className="flex-1 overflow-y-auto h-full"
+                >
+                  <div className="text-center py-8">
+                    <h3 className="text-lg font-semibold">Sermons View</h3>
+                    <p className="text-muted-foreground">
+                      View and manage your sermons
+                    </p>
+                  </div>
+                </TabsContent>
+                <TabsContent
+                  value="reports"
+                  className="flex-1 overflow-y-auto h-full"
+                >
+                  <div className="text-center py-8">
+                    <h3 className="text-lg font-semibold">Reports View</h3>
+                    <p className="text-muted-foreground">
+                      Analytics and insights about your sermons
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+            <Toaster />
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
+  );
+};
+
+export default DashboardPage;

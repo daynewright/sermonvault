@@ -13,6 +13,7 @@ import { useUser } from '@/hooks/use-user';
 import { MarkdownResponse } from './markdown-response';
 import { EmptyState } from './empty-state';
 import { useSermonsStore } from '@/store/use-sermons-store';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type Message = {
   id: string;
@@ -26,6 +27,8 @@ export default function ChatSection() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const isMobile = useIsMobile();
 
   const sermonCount = useSermonsStore((state) => state.sermonCount);
 
@@ -92,6 +95,7 @@ export default function ChatSection() {
         );
 
         // Force scroll after each update
+
         requestAnimationFrame(() => {
           scrollToBottom();
         });
@@ -104,8 +108,8 @@ export default function ChatSection() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col">
-      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
+    <div className="h-full flex flex-col">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4 overflow-y-auto">
         <ChatMessageList className="text-sm">
           {messages.length === 0 && <EmptyState />}
           {messages.map((message) => (
@@ -113,18 +117,20 @@ export default function ChatSection() {
               key={message.id}
               variant={message.role === 'user' ? 'sent' : 'received'}
             >
-              <ChatBubbleAvatar
-                src={
-                  message.role === 'user'
-                    ? user?.user_metadata.avatar_url
-                    : undefined
-                }
-                fallback={
-                  message.role === 'user'
-                    ? user?.user_metadata.name?.charAt(0)
-                    : 'AI'
-                }
-              />
+              {!isMobile && (
+                <ChatBubbleAvatar
+                  src={
+                    message.role === 'user'
+                      ? user?.user_metadata.avatar_url
+                      : undefined
+                  }
+                  fallback={
+                    message.role === 'user'
+                      ? user?.user_metadata.name?.charAt(0)
+                      : 'AI'
+                  }
+                />
+              )}
               <ChatBubbleMessage
                 variant={message.role === 'user' ? 'sent' : 'received'}
                 isLoading={message.isLoading}
@@ -140,7 +146,7 @@ export default function ChatSection() {
         </ChatMessageList>
       </ScrollArea>
 
-      <div className="border-t p-4">
+      <div className="border-t p-4 mb-14">
         {sermonCount > 0 && (
           <ChatInput
             placeholder="Ask me about your sermons..."

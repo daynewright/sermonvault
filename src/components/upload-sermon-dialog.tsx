@@ -3,9 +3,11 @@ import { FilePlus } from 'lucide-react';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
-import { UploadSermonFileProcess } from './upload-sermon-file-process';
-import { UploadSermonConfirmationForm } from './upload-sermon-confirmation-form';
+import { UploadSermonFileProcess } from '@/components/upload-sermon-file-process';
+import { UploadSermonConfirmationForm } from '@/components/upload-sermon-confirmation-form';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
+
 import { SermonData } from '@/types/sermonData';
 
 type UploadSermonDialogProps = {
@@ -15,15 +17,14 @@ type UploadSermonDialogProps = {
 export function UploadSermonDialog({ buttonVariant }: UploadSermonDialogProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sermonData, setSermonData] = useState<SermonData | null>(null);
-
-  console.log('sermonData', sermonData);
+  const isMobile = useIsMobile();
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant={buttonVariant} size="sm">
-          <FilePlus className="w-4 h-4 mr-2" />
-          Upload a sermon
+        <Button variant={buttonVariant} size={isMobile ? 'icon' : 'sm'}>
+          <FilePlus className="w-4 h-4" />
+          {!isMobile && 'Upload a sermon'}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px] min-h-[500px] max-h-[90vh] flex flex-col">
