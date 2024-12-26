@@ -42,7 +42,7 @@ const DashboardPage = () => {
               <Separator orientation="vertical" className="my-2 h-4" />
               <DashboardHeader className="flex-1" />
             </div>
-            <div className="flex-1 container max-w-4xl mx-auto px-4 py-6 overflow-hidden">
+            <div className="flex-1 container max-w-7xl mx-auto px-4 py-6 overflow-hidden">
               <Tabs defaultValue="chat" className="w-full h-full space-y-6">
                 <div className="flex justify-center">
                   <TabsList className="grid grid-cols-3">

@@ -37,7 +37,22 @@ export async function GET() {
       fileName: sermon.file_name,
       fileSize: sermon.file_size,
       pageCount: sermon.file_pages,
-      uploadedAt: sermon.created_at
+      uploadedAt: sermon.created_at,
+      primaryScripture: sermon.primary_scripture,
+      sermonType: sermon.sermon_type,
+      topics: sermon.topics,
+      tags: sermon.tags,
+      summary: sermon.summary,
+      keyPoints: sermon.key_points,
+      illustrations: sermon.illustrations,
+      themes: sermon.themes,
+      callsToAction: sermon.calls_to_action,
+      personalStories: sermon.personal_stories,
+      tone: sermon.tone,
+      mentionedPeople: sermon.mentioned_people,
+      mentionedEvents: sermon.mentioned_events,
+      wordCount: sermon.word_count,
+      keywords: sermon.keywords,
     }));
 
     return NextResponse.json(formattedSermons);
