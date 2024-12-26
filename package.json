@@ -44,10 +44,13 @@
     "openai": "^4.77.0",
     "pdf-parse": "^1.1.1",
     "pdf-parser": "^1.0.5",
+    "pdfjs-dist": "^4.9.155",
     "react": "^19.0.0",
     "react-day-picker": "8.10.1",
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.1",
+    "react-pdf": "^9.2.1",
+    "react-resizable-panels": "^2.1.7",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^5.0.2"

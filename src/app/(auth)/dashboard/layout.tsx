@@ -1,5 +1,12 @@
-const ChatLayout = ({ children }: { children: React.ReactNode }) => {
-  return <div>{children}</div>;
+import { Suspense } from 'react';
+import { SidebarProvider } from '@/components/ui/sidebar';
+
+const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SidebarProvider>{children}</SidebarProvider>
+    </Suspense>
+  );
 };
 
-export default ChatLayout;
+export default DashboardLayout;

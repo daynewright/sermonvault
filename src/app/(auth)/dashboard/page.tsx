@@ -15,8 +15,30 @@ import {
 } from '@/components/ui/sidebar';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { Separator } from '@/components/ui/separator';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const DashboardPage = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'chat';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', value);
+    router.push(`/dashboard?${params.toString()}`, { scroll: false });
+  };
+
+  // Update tab if URL changes
+  useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    if (currentTab && currentTab !== activeTab) {
+      setActiveTab(currentTab);
+    }
+  }, [searchParams, activeTab]);
+
   const renderTabContent = useCallback(
     (Component: React.FC, tabValue: string) => {
       return (
@@ -43,7 +65,11 @@ const DashboardPage = () => {
               <DashboardHeader className="flex-1" />
             </div>
             <div className="flex-1 container max-w-7xl mx-auto px-4 py-6 overflow-hidden">
-              <Tabs defaultValue="chat" className="w-full h-full space-y-6">
+              <Tabs
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="w-full h-full space-y-6"
+              >
                 <div className="flex justify-center">
                   <TabsList className="grid grid-cols-3">
                     <TabsTrigger
@@ -74,7 +100,6 @@ const DashboardPage = () => {
                 {renderTabContent(SectionReports, 'reports')}
               </Tabs>
             </div>
-            <Toaster />
             <Toaster />
           </main>
         </SidebarInset>

@@ -7,7 +7,6 @@ import {
   UserIcon,
   MapPinIcon,
   InfoIcon,
-  FileTextIcon,
   EditIcon,
   Trash2,
 } from 'lucide-react';
@@ -93,7 +92,7 @@ const sermonTypeDescriptions = {
   special: 'Unique messages for specific occasions or purposes',
 };
 
-export function SermonCard({
+export const SermonCard = ({
   sermonId,
   title,
   date,
@@ -105,21 +104,20 @@ export function SermonCard({
   summary,
   onSermonTypeClick,
   onTopicClick,
-  onView,
   onEdit,
   onDelete,
-}: SermonCardProps) {
+}: SermonCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleView = (e: React.MouseEvent) => {
+  const handleButtonClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    onView?.();
+    e.stopPropagation();
   };
 
   return (
     <Link href={`/sermons/${sermonId}`}>
       <Card
-        className="w-full max-w-md overflow-hidden border-l-4 flex flex-col rounded-sm hover:shadow-md transition-shadow"
+        className="w-full h-full max-w-md overflow-hidden border-l-4 flex flex-col rounded-sm hover:shadow-md transition-shadow"
         style={{ borderLeftColor: getSermonTypeColor(sermonType) }}
       >
         <CardHeader className="pb-2">
@@ -146,7 +144,10 @@ export function SermonCard({
                   <Badge
                     variant="secondary"
                     className={`uppercase text-xs font-medium shrink-0 ${sermonTypeColors[sermonType]} cursor-pointer`}
-                    onClick={() => onSermonTypeClick?.(sermonType)}
+                    onClick={(e) => {
+                      handleButtonClick(e);
+                      onSermonTypeClick?.(sermonType);
+                    }}
                   >
                     {sermonType}
                   </Badge>
@@ -180,7 +181,10 @@ export function SermonCard({
                   <Badge
                     variant="outline"
                     className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px] cursor-pointer"
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={(e) => {
+                      handleButtonClick(e);
+                      setIsOpen(!isOpen);
+                    }}
                   >
                     <InfoIcon className="h-3 w-3 text-slate-600" />
                     Summary
@@ -200,48 +204,26 @@ export function SermonCard({
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {topics.map((topic, index) => (
-              <TooltipProvider key={topic}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge
-                      className={`text-xs font-medium transition-colors h-[22px] inline-flex items-center cursor-pointer ${
-                        topicColors[index % topicColors.length]
-                      }`}
-                      onClick={() => onTopicClick?.(topic)}
-                    >
-                      {topic}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Filter by {topic}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+            {topics.map((topic) => (
+              <Badge
+                key={topic}
+                className={`text-xs font-medium transition-colors h-[22px] inline-flex items-center cursor-pointer ${
+                  topicColors[topics.indexOf(topic) % topicColors.length]
+                }`}
+                onClick={(e) => {
+                  handleButtonClick(e);
+                  onTopicClick?.(topic);
+                }}
+              >
+                {topic}
+              </Badge>
             ))}
           </div>
         </CardContent>
         <div className="mt-auto">
           <CardFooter className="border-t pt-4">
-            <div className="flex items-center justify-between w-full gap-2">
+            <div className="flex items-center justify-end w-full gap-2">
               <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-1 text-slate-600 hover:text-slate-900"
-                      onClick={handleView}
-                    >
-                      <FileTextIcon className="h-4 w-4" />
-                      <span className="sr-only">View</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View sermon</p>
-                  </TooltipContent>
-                </Tooltip>
-
                 <div className="flex items-center gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -249,7 +231,10 @@ export function SermonCard({
                         variant="ghost"
                         size="sm"
                         className="flex items-center gap-1 text-slate-600 hover:text-blue-600"
-                        onClick={onEdit}
+                        onClick={(e) => {
+                          handleButtonClick(e);
+                          onEdit?.();
+                        }}
                       >
                         <EditIcon className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
@@ -266,7 +251,10 @@ export function SermonCard({
                         variant="ghost"
                         size="sm"
                         className="flex items-center gap-1 text-slate-600 hover:text-red-600"
-                        onClick={onDelete}
+                        onClick={(e) => {
+                          handleButtonClick(e);
+                          onDelete?.();
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Delete</span>
@@ -284,4 +272,4 @@ export function SermonCard({
       </Card>
     </Link>
   );
-}
+};

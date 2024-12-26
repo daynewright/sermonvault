@@ -143,22 +143,23 @@ export function SectionSermons() {
       {/* Scrollable Sermons Grid */}
       <ScrollArea className="flex-1">
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 [&>*]:h-full">
             {filteredSermons?.map((sermon: any) => (
-              <SermonCard
-                key={sermon.id}
-                sermonId={sermon.id}
-                title={sermon.title}
-                date={new Date(sermon.date)}
-                preacher={sermon.preacher}
-                location={sermon.location}
-                primaryScripture={sermon.primaryScripture}
-                sermonType={sermon.sermonType}
-                topics={sermon.topics}
-                summary={sermon.summary}
-                onSermonTypeClick={handleSermonTypeClick}
-                onTopicClick={handleTopicClick}
-              />
+              <div key={sermon.id}>
+                <SermonCard
+                  sermonId={sermon.id}
+                  title={sermon.title}
+                  date={new Date(sermon.date)}
+                  preacher={sermon.preacher}
+                  location={sermon.location}
+                  primaryScripture={sermon.primaryScripture}
+                  sermonType={sermon.sermonType}
+                  topics={sermon.topics}
+                  summary={sermon.summary}
+                  onSermonTypeClick={handleSermonTypeClick}
+                  onTopicClick={handleTopicClick}
+                />
+              </div>
             ))}
           </div>
         </div>
