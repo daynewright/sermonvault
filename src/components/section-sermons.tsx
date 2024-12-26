@@ -147,6 +147,7 @@ export function SectionSermons() {
             {filteredSermons?.map((sermon: any) => (
               <SermonCard
                 key={sermon.id}
+                sermonId={sermon.id}
                 title={sermon.title}
                 date={new Date(sermon.date)}
                 preacher={sermon.preacher}

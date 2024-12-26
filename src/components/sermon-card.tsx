@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { format } from 'date-fns';
 import { useState } from 'react';
 import {
   CalendarIcon,
@@ -9,7 +11,6 @@ import {
   EditIcon,
   Trash2,
 } from 'lucide-react';
-import { format } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -31,6 +32,7 @@ import {
 } from '@/components/ui/tooltip';
 
 interface SermonCardProps {
+  sermonId: string;
   title: string;
   date: Date;
   preacher: string;
@@ -92,6 +94,7 @@ const sermonTypeDescriptions = {
 };
 
 export function SermonCard({
+  sermonId,
   title,
   date,
   preacher,
@@ -108,170 +111,177 @@ export function SermonCard({
 }: SermonCardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const handleView = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onView?.();
+  };
+
   return (
-    <Card
-      className="w-full max-w-md overflow-hidden border-l-4 flex flex-col rounded-sm"
-      style={{ borderLeftColor: getSermonTypeColor(sermonType) }}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start gap-2">
-          <div className="space-y-1 min-w-0">
-            <h3 className="text-xl font-semibold leading-tight line-clamp-2">
-              {title}
-            </h3>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <div className="flex items-center gap-1 min-w-0 max-w-[45%]">
-                <UserIcon className="h-3 w-3 shrink-0" />
-                <span className="truncate">{preacher}</span>
-              </div>
-              <span className="shrink-0">•</span>
-              <div className="flex items-center gap-1 min-w-0 max-w-[45%]">
-                <MapPinIcon className="h-3 w-3 shrink-0" />
-                <span className="truncate">{location}</span>
+    <Link href={`/sermons/${sermonId}`}>
+      <Card
+        className="w-full max-w-md overflow-hidden border-l-4 flex flex-col rounded-sm hover:shadow-md transition-shadow"
+        style={{ borderLeftColor: getSermonTypeColor(sermonType) }}
+      >
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start gap-2">
+            <div className="space-y-1 min-w-0">
+              <h3 className="text-xl font-semibold leading-tight line-clamp-2">
+                {title}
+              </h3>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-1 min-w-0 max-w-[45%]">
+                  <UserIcon className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{preacher}</span>
+                </div>
+                <span className="shrink-0">•</span>
+                <div className="flex items-center gap-1 min-w-0 max-w-[45%]">
+                  <MapPinIcon className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{location}</span>
+                </div>
               </div>
             </div>
-          </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="secondary"
-                  className={`uppercase text-xs font-medium shrink-0 ${sermonTypeColors[sermonType]} cursor-pointer`}
-                  onClick={() => onSermonTypeClick?.(sermonType)}
-                >
-                  {sermonType}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{sermonTypeDescriptions[sermonType]}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-3">
-        <div className="flex flex-wrap gap-2 text-sm">
-          <Badge
-            variant="outline"
-            className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px]"
-          >
-            <CalendarIcon className="h-3 w-3 text-slate-600" />
-            {format(date, 'MMM d, yyyy')}
-          </Badge>
-          <Badge
-            variant="outline"
-            className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px]"
-          >
-            <BookOpenIcon className="h-3 w-3 text-slate-600" />
-            {primaryScripture}
-          </Badge>
-          {summary && (
-            <HoverCard open={isOpen} onOpenChange={setIsOpen}>
-              <HoverCardTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px] cursor-pointer"
-                  onClick={() => setIsOpen(!isOpen)}
-                >
-                  <InfoIcon className="h-3 w-3 text-slate-600" />
-                  Summary
-                </Badge>
-              </HoverCardTrigger>
-              <HoverCardContent
-                className="w-[320px] p-4"
-                side="top"
-                align="start"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <p className="text-xs text-slate-600 italic leading-relaxed">
-                  {summary}
-                </p>
-              </HoverCardContent>
-            </HoverCard>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {topics.map((topic, index) => (
-            <TooltipProvider key={topic}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    className={`text-xs font-medium transition-colors h-[22px] inline-flex items-center cursor-pointer ${
-                      topicColors[index % topicColors.length]
-                    }`}
-                    onClick={() => onTopicClick?.(topic)}
-                  >
-                    {topic}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Filter by {topic}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-        </div>
-      </CardContent>
-      <div className="mt-auto">
-        <CardFooter className="border-t pt-4">
-          <div className="flex items-center justify-between w-full gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex items-center gap-1 text-slate-600 hover:text-slate-900"
-                    onClick={onView}
+                  <Badge
+                    variant="secondary"
+                    className={`uppercase text-xs font-medium shrink-0 ${sermonTypeColors[sermonType]} cursor-pointer`}
+                    onClick={() => onSermonTypeClick?.(sermonType)}
                   >
-                    <FileTextIcon className="h-4 w-4" />
-                    <span className="sr-only">View</span>
-                  </Button>
+                    {sermonType}
+                  </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>View sermon</p>
+                  <p>{sermonTypeDescriptions[sermonType]}</p>
                 </TooltipContent>
               </Tooltip>
-
-              <div className="flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-1 text-slate-600 hover:text-blue-600"
-                      onClick={onEdit}
-                    >
-                      <EditIcon className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Edit sermon</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-1 text-slate-600 hover:text-red-600"
-                      onClick={onDelete}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete sermon</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
             </TooltipProvider>
           </div>
-        </CardFooter>
-      </div>
-    </Card>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px]"
+            >
+              <CalendarIcon className="h-3 w-3 text-slate-600" />
+              {format(date, 'MMM d, yyyy')}
+            </Badge>
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px]"
+            >
+              <BookOpenIcon className="h-3 w-3 text-slate-600" />
+              {primaryScripture}
+            </Badge>
+            {summary && (
+              <HoverCard open={isOpen} onOpenChange={setIsOpen}>
+                <HoverCardTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px] cursor-pointer"
+                    onClick={() => setIsOpen(!isOpen)}
+                  >
+                    <InfoIcon className="h-3 w-3 text-slate-600" />
+                    Summary
+                  </Badge>
+                </HoverCardTrigger>
+                <HoverCardContent
+                  className="w-[320px] p-4"
+                  side="top"
+                  align="start"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p className="text-xs text-slate-600 italic leading-relaxed">
+                    {summary}
+                  </p>
+                </HoverCardContent>
+              </HoverCard>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {topics.map((topic, index) => (
+              <TooltipProvider key={topic}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      className={`text-xs font-medium transition-colors h-[22px] inline-flex items-center cursor-pointer ${
+                        topicColors[index % topicColors.length]
+                      }`}
+                      onClick={() => onTopicClick?.(topic)}
+                    >
+                      {topic}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Filter by {topic}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
+        </CardContent>
+        <div className="mt-auto">
+          <CardFooter className="border-t pt-4">
+            <div className="flex items-center justify-between w-full gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-1 text-slate-600 hover:text-slate-900"
+                      onClick={handleView}
+                    >
+                      <FileTextIcon className="h-4 w-4" />
+                      <span className="sr-only">View</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View sermon</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex items-center gap-1 text-slate-600 hover:text-blue-600"
+                        onClick={onEdit}
+                      >
+                        <EditIcon className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Edit sermon</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex items-center gap-1 text-slate-600 hover:text-red-600"
+                        onClick={onDelete}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Delete sermon</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
+            </div>
+          </CardFooter>
+        </div>
+      </Card>
+    </Link>
   );
 }

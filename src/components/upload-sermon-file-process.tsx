@@ -117,7 +117,9 @@ export const UploadSermonFileProcess = ({
       setProcessingStatus((prev) => ({ ...prev, store: 'completed' }));
 
       // Get the final sermon data
-      const sermonResponse = await fetch(`/api/sermons/${sermonId}`);
+      const sermonResponse = await fetch(
+        `/api/sermons/${sermonId}?confidence=true`
+      );
       const sermonData = await sermonResponse.json();
       setSermonData(sermonData);
     } catch (error) {

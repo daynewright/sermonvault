@@ -99,6 +99,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ sermo
 export async function GET(req: Request, { params }: { params: Promise<{ sermonId: string }> }) {
   const supabase = createServerSupabaseClient();
   const { sermonId } = await params;
+  const { searchParams } = new URL(req.url);
+
+  const includeConfidence = searchParams.get('confidence') === 'true';
   
   // Check authentication
   const { data: { user } } = await supabase.auth.getUser();
@@ -131,6 +134,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ sermonId
     );
   }
 
+  if (includeConfidence) {
   // Transform the sermon data
   const fields: Record<string, SermonField> = {
     id: { value: sermon.id, confidence: sermon.confidence_scores?.id || 0 },
@@ -157,15 +161,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ sermonId
     location: { value: sermon.location, confidence: sermon.confidence_scores?.location || 0 },
     keywords: { value: sermon.keywords, confidence: sermon.confidence_scores?.keywords || 0 }
   };
-// If we need more fields, we can add them here
-  // const transformedSermon = {
-  //   id: sermon.id,
-  //   userId: sermon.user_id,
-  //   createdAt: sermon.created_at,
-  //   fields
-  // };
 
   return NextResponse.json(fields);
+  }
+
+  return NextResponse.json(sermon);
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ sermonId: string }> }) {
