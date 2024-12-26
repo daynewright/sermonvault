@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -59,6 +60,8 @@ export function SermonSidebar({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const router = useRouter();
 
   const setSermonCount = useSermonsStore((state) => state.setSermonCount);
 
@@ -249,9 +252,11 @@ export function SermonSidebar({
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 px-2 text-[10px] text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                                  onClick={() => {}}
+                                  onClick={() => {
+                                    router.push(`/sermons/${sermon.id}`);
+                                  }}
                                 >
-                                  View File
+                                  View Sermon
                                 </Button>
                                 <Button
                                   variant="ghost"
