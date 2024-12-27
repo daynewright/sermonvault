@@ -29,7 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
+import { DeleteSermonAlert } from '@/components/delete-sermon-alert';
 interface SermonCardProps {
   sermonId: string;
   title: string;
@@ -105,171 +105,187 @@ export const SermonCard = ({
   onSermonTypeClick,
   onTopicClick,
   onEdit,
-  onDelete,
 }: SermonCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
-
-  const handleButtonClick = (e: React.MouseEvent) => {
+  const [sermonToDelete, setSermonToDelete] = useState<string | null>(null);
+  const handleButtonClick = (e: React.MouseEvent, callback?: () => void) => {
     e.preventDefault();
     e.stopPropagation();
+    callback?.();
   };
 
   return (
-    <Link href={`/sermons/${sermonId}`}>
-      <Card
-        className="w-full h-full max-w-md overflow-hidden border-l-4 flex flex-col rounded-sm hover:shadow-md transition-shadow"
-        style={{ borderLeftColor: getSermonTypeColor(sermonType) }}
-      >
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-start gap-2">
-            <div className="space-y-1 min-w-0">
-              <h3 className="text-xl font-semibold leading-tight line-clamp-2">
-                {title}
-              </h3>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <div className="flex items-center gap-1 min-w-0 max-w-[45%]">
-                  <UserIcon className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{preacher}</span>
-                </div>
-                <span className="shrink-0">•</span>
-                <div className="flex items-center gap-1 min-w-0 max-w-[45%]">
-                  <MapPinIcon className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{location}</span>
+    <>
+      <Link href={`/sermons/${sermonId}`}>
+        <Card
+          className="w-full h-full max-w-md overflow-hidden border-l-4 flex flex-col rounded-sm hover:shadow-md transition-shadow"
+          style={{ borderLeftColor: getSermonTypeColor(sermonType) }}
+        >
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-start gap-2">
+              <div className="space-y-1 min-w-0">
+                <h3 className="text-xl font-semibold leading-tight line-clamp-2">
+                  {title}
+                </h3>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-1 min-w-0 max-w-[45%]">
+                    <UserIcon className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{preacher}</span>
+                  </div>
+                  <span className="shrink-0">•</span>
+                  <div className="flex items-center gap-1 min-w-0 max-w-[45%]">
+                    <MapPinIcon className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{location}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant="secondary"
-                    className={`uppercase text-xs font-medium shrink-0 ${sermonTypeColors[sermonType]} cursor-pointer`}
-                    onClick={(e) => {
-                      handleButtonClick(e);
-                      onSermonTypeClick?.(sermonType);
-                    }}
-                  >
-                    {sermonType}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{sermonTypeDescriptions[sermonType]}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-3">
-          <div className="flex flex-wrap gap-2 text-sm">
-            <Badge
-              variant="outline"
-              className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px]"
-            >
-              <CalendarIcon className="h-3 w-3 text-slate-600" />
-              {format(date, 'MMM d, yyyy')}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px]"
-            >
-              <BookOpenIcon className="h-3 w-3 text-slate-600" />
-              {primaryScripture}
-            </Badge>
-            {summary && (
-              <HoverCard open={isOpen} onOpenChange={setIsOpen}>
-                <HoverCardTrigger asChild>
-                  <Badge
-                    variant="outline"
-                    className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px] cursor-pointer"
-                    onClick={(e) => {
-                      handleButtonClick(e);
-                      setIsOpen(!isOpen);
-                    }}
-                  >
-                    <InfoIcon className="h-3 w-3 text-slate-600" />
-                    Summary
-                  </Badge>
-                </HoverCardTrigger>
-                <HoverCardContent
-                  className="w-[320px] p-4"
-                  side="top"
-                  align="start"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <p className="text-xs text-slate-600 italic leading-relaxed">
-                    {summary}
-                  </p>
-                </HoverCardContent>
-              </HoverCard>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {topics.map((topic) => (
-              <Badge
-                key={topic}
-                className={`text-xs font-medium transition-colors h-[22px] inline-flex items-center cursor-pointer ${
-                  topicColors[topics.indexOf(topic) % topicColors.length]
-                }`}
-                onClick={(e) => {
-                  handleButtonClick(e);
-                  onTopicClick?.(topic);
-                }}
-              >
-                {topic}
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-        <div className="mt-auto">
-          <CardFooter className="border-t pt-4">
-            <div className="flex items-center justify-end w-full gap-2">
               <TooltipProvider>
-                <div className="flex items-center gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center gap-1 text-slate-600 hover:text-blue-600"
-                        onClick={(e) => {
-                          handleButtonClick(e);
-                          onEdit?.();
-                        }}
-                      >
-                        <EditIcon className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Edit sermon</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center gap-1 text-slate-600 hover:text-red-600"
-                        onClick={(e) => {
-                          handleButtonClick(e);
-                          onDelete?.();
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Delete sermon</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="secondary"
+                      className={`uppercase text-xs font-medium shrink-0 ${sermonTypeColors[sermonType]} cursor-pointer`}
+                      onClick={(e) => {
+                        handleButtonClick(e, () => {
+                          onSermonTypeClick?.(sermonType);
+                        });
+                      }}
+                    >
+                      {sermonType}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{sermonTypeDescriptions[sermonType]}</p>
+                  </TooltipContent>
+                </Tooltip>
               </TooltipProvider>
             </div>
-          </CardFooter>
-        </div>
-      </Card>
-    </Link>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <div className="flex flex-wrap gap-2 text-sm">
+              <Badge
+                variant="outline"
+                className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px]"
+              >
+                <CalendarIcon className="h-3 w-3 text-slate-600" />
+                {format(date, 'MMM d, yyyy')}
+              </Badge>
+              <Badge
+                variant="outline"
+                className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px]"
+              >
+                <BookOpenIcon className="h-3 w-3 text-slate-600" />
+                {primaryScripture}
+              </Badge>
+              {summary && (
+                <HoverCard open={isOpen} onOpenChange={setIsOpen}>
+                  <HoverCardTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1 bg-white rounded-sm hover:bg-slate-50 transition-colors px-2 py-0.5 h-[22px] cursor-pointer"
+                      onClick={(e) => {
+                        handleButtonClick(e, () => {
+                          setIsOpen(!isOpen);
+                        });
+                      }}
+                    >
+                      <InfoIcon className="h-3 w-3 text-slate-600" />
+                      Summary
+                    </Badge>
+                  </HoverCardTrigger>
+                  <HoverCardContent
+                    className="w-[320px] p-4"
+                    side="top"
+                    align="start"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p className="text-xs text-slate-600 italic leading-relaxed">
+                      {summary}
+                    </p>
+                  </HoverCardContent>
+                </HoverCard>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {topics.map((topic) => (
+                <Badge
+                  key={topic}
+                  className={`text-xs font-medium transition-colors h-[22px] inline-flex items-center cursor-pointer ${
+                    topicColors[topics.indexOf(topic) % topicColors.length]
+                  }`}
+                  onClick={(e) => {
+                    handleButtonClick(e, () => {
+                      onTopicClick?.(topic);
+                    });
+                  }}
+                >
+                  {topic}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+          <div className="mt-auto">
+            <CardFooter className="border-t pt-4">
+              <div className="flex items-center justify-end w-full gap-2">
+                <TooltipProvider>
+                  <div className="flex items-center gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex items-center gap-1 text-slate-600 hover:text-blue-600"
+                          onClick={(e) => {
+                            handleButtonClick(e, () => {
+                              onEdit?.();
+                            });
+                          }}
+                        >
+                          <EditIcon className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Edit sermon</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex items-center gap-1 text-slate-600 hover:text-red-600"
+                          onClick={(e) => {
+                            handleButtonClick(e, () => {
+                              setSermonToDelete(sermonId);
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Delete sermon</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
+              </div>
+            </CardFooter>
+          </div>
+        </Card>
+      </Link>
+      <DeleteSermonAlert
+        title={title}
+        sermonId={sermonId}
+        open={!!sermonToDelete}
+        onCancel={() => setSermonToDelete(null)}
+        onSuccess={() => {
+          setSermonToDelete(null);
+        }}
+      />
+    </>
   );
 };

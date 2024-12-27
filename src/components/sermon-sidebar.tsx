@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/fetch/use-user';
 import { useSermonsStore } from '@/store/use-sermons-store';
 import { useSermons } from '@/hooks/fetch/use-sermons';
+import { DeleteSermonAlert } from '@/components/delete-sermon-alert';
 
 import {
   FileText,
@@ -18,16 +19,6 @@ import {
   BookOpen,
   Search,
 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
   Popover,
   PopoverContent,
@@ -57,20 +48,13 @@ export function SermonSidebar({
 }: React.ComponentProps<typeof Sidebar>) {
   const { toast } = useToast();
   const { data: user, isLoading: isUserLoading } = useUser();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const router = useRouter();
 
   const setSermonCount = useSermonsStore((state) => state.setSermonCount);
-
-  const {
-    data: sermons = [],
-    isLoading,
-    error,
-    refetch: refetchSermons,
-  } = useSermons();
+  const { data: sermons = [], isLoading, error } = useSermons();
 
   if (error) {
     toast({
@@ -83,33 +67,6 @@ export function SermonSidebar({
   useEffect(() => {
     setSermonCount(sermons.length);
   }, [sermons]);
-
-  const handleDelete = async (sermon: Sermon) => {
-    setSermonToDelete(null);
-    setDeletingId(sermon.id);
-
-    try {
-      const response = await fetch(`/api/sermons/${sermon.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete sermon');
-
-      refetchSermons();
-      toast({
-        description: 'Sermon deleted successfully',
-      });
-    } catch (err) {
-      console.error('Error deleting sermon:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to delete sermon',
-      });
-    } finally {
-      setDeletingId(null);
-    }
-  };
 
   const filteredSermons = useMemo(() => {
     if (!searchQuery.trim()) return sermons;
@@ -184,9 +141,9 @@ export function SermonSidebar({
                             e.stopPropagation();
                             setSermonToDelete(sermon);
                           }}
-                          disabled={deletingId === sermon.id}
+                          disabled={sermonToDelete?.id === sermon.id}
                         >
-                          {deletingId === sermon.id ? (
+                          {sermonToDelete?.id === sermon.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -282,30 +239,15 @@ export function SermonSidebar({
           </ScrollArea>
         </SidebarGroup>
       </SidebarContent>
-      <AlertDialog
+      <DeleteSermonAlert
         open={!!sermonToDelete}
-        onOpenChange={() => setSermonToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete &quot;
-              {sermonToDelete?.title}
-              &quot; and it will no longer be searchable with AI.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={() => sermonToDelete && handleDelete(sermonToDelete)}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={sermonToDelete?.title}
+        sermonId={sermonToDelete?.id}
+        onCancel={() => setSermonToDelete(null)}
+        onSuccess={() => {
+          setSermonToDelete(null);
+        }}
+      />
     </Sidebar>
   );
 }

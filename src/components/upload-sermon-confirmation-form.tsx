@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { SermonData, SERMON_TYPES, SERMON_TAGS } from '@/types/sermonData';
-import { useUpdateSermon } from '@/hooks/fetch/use-sermons';
+import { useSermons, useUpdateSermon } from '@/hooks/fetch/use-sermons';
 import { useToast } from '@/hooks/use-toast';
 
 export const UploadSermonConfirmationForm = ({
@@ -49,6 +49,7 @@ export const UploadSermonConfirmationForm = ({
 }) => {
   const [formData, setFormData] = useState<SermonData>(initialData);
   const { mutateAsync: updateSermon, isPending } = useUpdateSermon();
+  const { refetch: refetchSermons } = useSermons();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,6 +66,7 @@ export const UploadSermonConfirmationForm = ({
       });
 
       if (response.ok) {
+        refetchSermons();
         toast({
           title: 'Sermon updated successfully',
           description:

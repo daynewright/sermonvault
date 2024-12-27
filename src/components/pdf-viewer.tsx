@@ -30,7 +30,6 @@ export const PDFViewer = ({ filePath }: PDFViewerProps) => {
           `/api/pdf?path=${encodeURIComponent(filePath)}`
         );
         const responseText = await response.text();
-        console.log('Response text:', responseText);
 
         if (!responseText) {
           throw new Error('Empty response from server');
@@ -46,7 +45,6 @@ export const PDFViewer = ({ filePath }: PDFViewerProps) => {
         setPdfUrl(data.url);
       } catch (err) {
         setError('Failed to load PDF');
-        console.error('Error fetching PDF:', err);
       }
     };
 
