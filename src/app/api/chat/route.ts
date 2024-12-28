@@ -148,7 +148,7 @@ export async function POST(req: Request) {
     const { data, error } = await supabase.rpc('match_documents', {
       query_embedding: embedding[0].embedding,
       match_threshold: 0.2,  // Lower threshold to catch more matches
-      match_count: 15,
+      match_count: 25,
       p_user_id: user.id
     });
 
