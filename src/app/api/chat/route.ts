@@ -110,6 +110,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Try to use function handlers first
+    let functionResult = [];
     try {
       const classification = await classifySermonQuery(message, openai);
 
@@ -121,59 +122,26 @@ export async function POST(req: Request) {
           throw new Error(`Handler ${classification.function} is not a function`);
         }
         
-        const functionResult = await handler({
+        functionResult = await handler({
           supabase,
           userId: user.id,
           parameters: classification.parameters
         });
         
-        // Add validation for the function result
-        if (!functionResult) {
-          console.log('Function returned no results');
-          throw new Error('No results from function handler');
-        }
-
-        // If we got results, format them
-        if (functionResult.length > 0) {
-          const stream = await openai.chat.completions.create({
-            messages: [
-              {
-                role: "system",
-                content: `You are a helpful sermon assistant. Format this analytical data into a natural response.
-                First, provide your analysis in a clear, conversational way.
-                Then, end your response with a list of all referenced sermons in this format:
-                SERMONS_START
-                [{"id": [sermon-id], "title": [sermon-title]}]
-                SERMONS_END
-
-                NEVER hallucinate data that is not in the context.
-                Original question: ${message}`
-              },
-              ...limitedMessages,
-              { 
-                role: "user", 
-                content: JSON.stringify(functionResult, null, 2) 
-              }
-            ],
-            model: "gpt-3.5-turbo",
-            temperature: 0.7,
-            stream: true,
-          });
-
-          return createStreamingResponse(stream);
+        if (!functionResult || functionResult.length === 0) {
+          console.log('Function returned no results, will combine with embedding search');
         }
       }
     } catch (functionError) {
-      console.log('Function handling failed, falling back to embedding search');
+      console.log('Function handling failed:', functionError);
     }
 
-    // 3. Fall back to your existing embedding search
+    // 3. Always do embedding search to supplement results
     const { data: embedding } = await openai.embeddings.create({
       model: 'text-embedding-3-small',
-      input: message,
+      input: `Find sermons about: ${message}. Include related topics and themes.`,
     });
 
-    // Get potentially relevant documents with higher recall
     const { data: documents, error: searchError } = await supabase.rpc(
       'match_documents',
       {
@@ -210,19 +178,21 @@ export async function POST(req: Request) {
       })
       .join('\n\n');
 
-
+    // Combine function results with embedding results
     const stream = await openai.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: `You are a helpful sermon assistant. Use the following sermon content to answer questions: ${context}
-          First, provide your analysis in a clear, conversational way.    
-          Then, end your response with a list of all referenced sermons in this format:
-          SERMONS_START
-          [{"id": [sermon-id], "title": [sermon-title]}]
-          SERMONS_END
+          content: `You are a helpful sermon assistant. Use the following data to answer questions:
           
-          NEVER hallucinate data that is not in the context.`
+Function Analysis: ${JSON.stringify(functionResult)}
+
+Relevant Sermon Content: ${context}
+
+First, provide your analysis in a clear, conversational way.
+Then, end your response with a list of all referenced sermons in this format:
+SERMONS_START [{"id": [sermon-id], "title": [sermon-title]}] SERMONS_END
+Use markdown formatting to make the response more readable.`
         },
         ...limitedMessages,
         { role: "user", content: message }

@@ -9,9 +9,14 @@ type SermonReference = {
 export function SermonReferences({ sermons }: { sermons: SermonReference[] }) {
   if (!sermons || sermons.length === 0) return null;
 
+  // Create array of unique sermons by ID
+  const uniqueSermons = Array.from(
+    new Map(sermons.map((s) => [s.id, s])).values()
+  );
+
   return (
     <div className="flex flex-wrap gap-2 mt-2">
-      {sermons.map((sermon) => (
+      {uniqueSermons.map((sermon) => (
         <Link
           key={sermon.id}
           href={`/sermons/${sermon.id}`}
