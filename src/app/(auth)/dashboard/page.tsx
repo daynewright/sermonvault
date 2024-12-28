@@ -21,7 +21,7 @@ import { useEffect, useState } from 'react';
 const DashboardPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'chat';
+  const initialTab = searchParams.get('tab') || 'sermons';
   const [activeTab, setActiveTab] = useState(initialTab);
 
   const handleTabChange = (value: string) => {
@@ -73,18 +73,18 @@ const DashboardPage = () => {
                 <div className="flex justify-center">
                   <TabsList className="grid grid-cols-3">
                     <TabsTrigger
-                      value="chat"
-                      className="flex items-center gap-2"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      Chat
-                    </TabsTrigger>
-                    <TabsTrigger
                       value="sermons"
                       className="flex items-center gap-2"
                     >
                       <BookOpen className="h-4 w-4" />
                       Sermons
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="chat"
+                      className="flex items-center gap-2"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Chat
                     </TabsTrigger>
                     <TabsTrigger
                       value="reports"
@@ -95,8 +95,8 @@ const DashboardPage = () => {
                     </TabsTrigger>
                   </TabsList>
                 </div>
-                {renderTabContent(SectionChat, 'chat')}
                 {renderTabContent(SectionSermons, 'sermons')}
+                {renderTabContent(SectionChat, 'chat')}
                 {renderTabContent(SectionReports, 'reports')}
               </Tabs>
             </div>
