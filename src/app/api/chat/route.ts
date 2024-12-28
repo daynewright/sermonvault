@@ -136,29 +136,30 @@ export async function POST(req: Request) {
       console.log('Function handling failed:', functionError);
     }
 
-    // 3. Always do embedding search to supplement results
+    const embeddingInput = `${message}. Find content about this person, including mentions, quotes, or references.`;
+
     const { data: embedding } = await openai.embeddings.create({
       model: 'text-embedding-3-small',
-      input: `Find sermons about: ${message}. Include related topics and themes.`,
+      input: embeddingInput,
     });
 
-    const { data: documents, error: searchError } = await supabase.rpc(
-      'match_documents',
-      {
-        query_embedding: embedding[0].embedding,
-        match_threshold: 0.2,
-        match_count: 10,
-        p_user_id: user.id
-      }
-    );
+    
+    // Execute query with lower threshold
+    const { data, error } = await supabase.rpc('match_documents', {
+      query_embedding: embedding[0].embedding,
+      match_threshold: 0.2,  // Lower threshold to catch more matches
+      match_count: 15,
+      p_user_id: user.id
+    });
 
-    if (searchError) {
-      console.error('Search error:', searchError);
-      throw searchError;
+
+    if (error) {
+      console.error('Search error:', error);
+      throw error;
     }
 
     // Get unique sermon IDs and fetch sermon metadata
-    const sermonIds = [...new Set(documents?.map((doc: any) => doc.sermon_id))];
+    const sermonIds = [...new Set(data?.map((doc: any) => doc.sermon_id))];
     const { data: matchingSermons, error: sermonsError } = await supabase
       .from('sermons')
       .select('*')
@@ -170,7 +171,7 @@ export async function POST(req: Request) {
     }
 
     // Format context for regular chat
-    const context = documents
+    const context = data
       ?.sort((a: any, b: any) => b.similarity - a.similarity)
       ?.map((doc: any) => {
         const sermon = matchingSermons?.find(s => s.id === doc.sermon_id);

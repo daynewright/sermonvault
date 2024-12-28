@@ -219,11 +219,12 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    -- Simple cosine distance query
     RETURN QUERY
-    SELECT
+    SELECT 
         s.id as sermon_id,
         sc.content,
-        1 - (sc.embedding <=> query_embedding) as similarity,
+        (sc.embedding <=> query_embedding) as similarity,
         s.title,
         s.date,
         s.preacher,
@@ -232,7 +233,7 @@ BEGIN
     FROM sermon_chunks sc
     JOIN sermons s ON s.id = sc.sermon_id
     WHERE s.user_id = p_user_id
-    ORDER BY 1 - (sc.embedding <=> query_embedding) DESC
+    ORDER BY similarity ASC
     LIMIT match_count;
 END;
 $$;
