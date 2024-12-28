@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import MessageLoading from './message-loading';
 import { Button, ButtonProps } from '../button';
+import { SermonReferences } from '@/components/sermon-references';
 
 // ChatBubble
 const chatBubbleVariant = cva(
@@ -94,6 +95,7 @@ interface ChatBubbleMessageProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof chatBubbleMessageVariants> {
   isLoading?: boolean;
+  sermons?: { id: string; title: string }[];
 }
 
 const ChatBubbleMessage = React.forwardRef<
@@ -101,24 +103,35 @@ const ChatBubbleMessage = React.forwardRef<
   ChatBubbleMessageProps
 >(
   (
-    { className, variant, layout, isLoading = false, children, ...props },
+    {
+      className,
+      variant,
+      layout,
+      isLoading = false,
+      children,
+      sermons,
+      ...props
+    },
     ref
   ) => (
-    <div
-      className={cn(
-        chatBubbleMessageVariants({ variant, layout, className }),
-        'break-words max-w-full whitespace-pre-wrap'
-      )}
-      ref={ref}
-      {...props}
-    >
-      {isLoading ? (
-        <div className="flex items-center space-x-2">
-          <MessageLoading />
-        </div>
-      ) : (
-        children
-      )}
+    <div className="flex flex-col gap-2">
+      <div
+        className={cn(
+          chatBubbleMessageVariants({ variant, layout, className }),
+          'break-words max-w-full whitespace-pre-wrap'
+        )}
+        ref={ref}
+        {...props}
+      >
+        {isLoading ? (
+          <div className="flex items-center space-x-2">
+            <MessageLoading />
+          </div>
+        ) : (
+          children
+        )}
+      </div>
+      {sermons && <SermonReferences sermons={sermons} />}
     </div>
   )
 );

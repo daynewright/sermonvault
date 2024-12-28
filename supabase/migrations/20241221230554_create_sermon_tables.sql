@@ -231,9 +231,8 @@ BEGIN
         s.primary_scripture as scripture
     FROM sermon_chunks sc
     JOIN sermons s ON s.id = sc.sermon_id
-    WHERE 1 - (sc.embedding <=> query_embedding) > match_threshold
-    AND s.user_id = p_user_id
-    ORDER BY similarity DESC
+    WHERE s.user_id = p_user_id
+    ORDER BY 1 - (sc.embedding <=> query_embedding) DESC
     LIMIT match_count;
 END;
 $$;
